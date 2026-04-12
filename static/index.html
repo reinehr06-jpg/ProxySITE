@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Admin | Premium Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Leaflet for Mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet for High Fidelity Mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span>Basileia <b>Proxy</b></span>
+        </div>
+        <ul class="nav-links">
+            <li><div class="tab-link active" data-tab="dashboard"><i class="fas fa-th-large"></i> Dashboard</div></li>
+            <li><div class="tab-link" data-tab="clients"><i class="fas fa-church"></i> Clientes</div></li>
+            <li><div class="tab-link" data-tab="addresses"><i class="fas fa-network-wired"></i> Endereços</div></li>
+            <li><div class="tab-link" data-tab="estados"><i class="fas fa-map-marker-alt"></i> Estados</div></li>
+            <li><div class="tab-link" data-tab="settings"><i class="fas fa-cog"></i> Configurações</div></li>
+        </ul>
+        <div class="sidebar-footer">
+            <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </nav>
+
+    <main class="content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <!-- 4 KPI Squares -->
+            <div class="kpi-grid">
+                <div class="kpi-square" onclick="switchTab('clients', 'active')">
+                    <div class="kpi-val" id="kpi-active">0</div>
+                    <div class="kpi-lab">Ativos</div>
+                </div>
+                <div class="kpi-square" onclick="switchTab('clients', 'offline')">
+                    <div class="kpi-val" id="kpi-off">0</div>
+                    <div class="kpi-lab">Off</div>
+                </div>
+                <div class="kpi-square no-link">
+                    <div class="kpi-val" id="kpi-resp">0ms</div>
+                    <div class="kpi-lab">Tempo Médio</div>
+                </div>
+                <div class="kpi-square" onclick="openSettingBlock('integrations')">
+                    <div class="kpi-val" id="kpi-uazapi">...</div>
+                    <div class="kpi-lab">Uazapi</div>
+                </div>
+            </div>
+
+            <div class="dash-split-view">
+                <section class="mini-card fallen-list">
+                    <h3>🆘 Quedas Recentes</h3>
+                    <div class="mini-table-container">
+                        <table id="mini-fallen-table">
+                            <tbody id="fallen-clients-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <section class="mini-card state-list">
+                    <h3>📍 Localizações</h3>
+                    <div class="simple-state-list" id="simple-state-list">
+                        <!-- Simple list of states here -->
+                    </div>
+                    <button class="btn-text-link" onclick="switchTab('estados')">Ver Mapa Completo <i class="fas fa-arrow-right"></i></button>
+                </section>
+            </div>
+        </div>
+
+        <!-- Estados Tab -->
+        <div id="estados" class="tab-content">
+            <header>
+                <h1>Distribuição por Estado / Cidade</h1>
+            </header>
+            <div class="state-grid" id="state-grid-container">
+                <!-- State cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Clientes Tab -->
+        <div id="clients" class="tab-content">
+            <header>
+                <div class="welcome">
+                    <h1>Gerenciamento de Clientes</h1>
+                    <p>Base completa integrada com Basileia Church.</p>
+                </div>
+            </header>
+            
+            <!-- Advanced Filters -->
+            <div class="filter-bar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="client-search" placeholder="Busque por Telefone, CPF/CNPJ, Igreja ou ID..." onkeyup="filterClients()">
+                </div>
+                <div class="select-group">
+                    <select id="filter-state" onchange="filterClients()">
+                        <option value="">Todos os Estados</option>
+                    </select>
+                    <select id="filter-city" onchange="filterClients()">
+                        <option value="">Todas as Cidades</option>
+                    </select>
+                </div>
+            </div>
+
+            <section class="table-section">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Instituição / Igreja</th>
+                                <th>Telefone Conectado</th>
+                                <th>IP Padrão</th>
+                                <th>Basileia ID</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-clients-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Monitoramento Tab (IP Activity) -->
+        <div id="monitoramento" class="tab-content">
+            <header>
+                <div class="welcome">
+                    <h1>Monitoramento Industrial</h1>
+                    <p>Histórico completo de requisições por IP (6 meses).</p>
+                </div>
+            </header>
+            <div class="monitor-grid">
+                <div class="ip-list-panel">
+                    <div class="ip-list" id="monitor-ip-list"></div>
+                    <div class="recovery-logs">
+                        <h3><i class="fas fa-history"></i> Recuperação</h3>
+                        <div class="logs-container" id="logs-container"></div>
+                    </div>
+                </div>
+                <div class="ip-details">
+                    <div class="details-header">
+                        <h2 id="selected-ip-title">Fluxo de Rede</h2>
+                    </div>
+                    <div class="flow-container" id="network-flow-container">
+                        <p class="placeholder-text">Selecione um IP para ver o fluxo.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Addresses Tab -->
+        <div id="addresses" class="tab-content">
+            <header>
+                <div class="welcome">
+                    <h1>Dispositivos & Endereços</h1>
+                    <p>Mapeamento de hardware gerador de IPs.</p>
+                </div>
+            </header>
+            <div class="address-grid" id="address-grid"></div>
+        </div>
+
+        <!-- Settings Tab (Windows 10 Style) -->
+        <div id="settings" class="tab-content">
+            <header class="win-settings-header">
+                <h1>Configurações do Sistema</h1>
+                <div class="win-search-box">
+                    <input type="text" id="settings-search" placeholder="Localizar uma configuração..." onkeyup="smartSettingsSearch()">
+                    <button class="btn-win-search"><i class="fas fa-search"></i></button>
+                </div>
+            </header>
+            
+            <div class="win-tiles-grid">
+                <div class="win-tile" data-tag="conta" onclick="openSettingBlock('account')">
+                    <div class="tile-icon"><i class="fas fa-user-circle"></i></div>
+                    <div class="tile-info">
+                        <h3>Conta</h3>
+                        <p>Informações e perfil</p>
+                    </div>
+                </div>
+                <div class="win-tile" data-tag="senha seguranca" onclick="openSettingBlock('security')">
+                    <div class="tile-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="tile-info">
+                        <h3>Segurança</h3>
+                        <p>Autenticação e Senhas</p>
+                    </div>
+                </div>
+                <div class="win-tile" data-tag="integracao basileia api uazapi" onclick="openSettingBlock('integrations')">
+                    <div class="tile-icon"><i class="fas fa-exchange-alt"></i></div>
+                    <div class="tile-info">
+                        <h3>Integrações</h3>
+                        <p>Webhooks e APIs</p>
+                    </div>
+                </div>
+                <div class="win-tile" data-tag="log monitoramento performance" onclick="openSettingBlock('monitoring')">
+                    <div class="tile-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="tile-info">
+                        <h3>Monitoramento</h3>
+                        <p>Performance e Tráfego</p>
+                    </div>
+                </div>
+                <div class="win-tile" data-tag="limpeza banco dados historico" onclick="openSettingBlock('cleanup')">
+                    <div class="tile-icon"><i class="fas fa-broom"></i></div>
+                    <div class="tile-info">
+                        <h3>Limpeza</h3>
+                        <p>Manutenção do Banco</p>
+                    </div>
+                </div>
+                <div class="win-tile" data-tag="alertas notificacao queda" onclick="openSettingBlock('alerts')">
+                    <div class="tile-icon"><i class="fas fa-bell"></i></div>
+                    <div class="tile-info">
+                        <h3>Alertas</h3>
+                        <p>Push e Notificações</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <!-- Apple Style Map Overlay -->
+    <div id="map-overlay">
+        <div class="map-header">
+            <h2 id="map-title-state">Visualização de Redes</h2>
+            <button onclick="closeAppleMap()" class="btn-logout">Fechar Mapa <i class="fas fa-times"></i></button>
+        </div>
+        <div id="map-canvas"></div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

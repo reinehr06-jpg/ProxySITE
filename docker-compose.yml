@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: proxy_postgres_new
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: proxy_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - proxy_db_data_new:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: proxy_redis_new
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - proxy_redis_data_new:/data
+
+  app:
+    build: .
+    container_name: proxy_app_new
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/proxy_db
+      REDIS_URL: redis://redis:6379/0
+      UAZAPI_TOKEN: your_uazapi_token_here
+      BASILEIA_API_KEY: your_basileia_key_here
+    volumes:
+      - .:/app
+
+volumes:
+  proxy_db_data_new:
+  proxy_redis_data_new:
