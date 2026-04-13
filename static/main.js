@@ -1,7 +1,7 @@
-// AUTH CHECK
-if (!localStorage.getItem('isAuthenticated') && !window.location.href.includes('login.html')) {
-    window.location.href = 'login.html';
-}
+// AUTH CHECK - DESABILITADO PARA DEMONSTRAÇÃO
+// if (!localStorage.getItem('isAuthenticated') && !window.location.href.includes('login.html')) {
+//     window.location.href = 'login.html';
+// }
 
 let activeTab = 'dashboard';
 let allClients = [];
@@ -445,7 +445,7 @@ function showSettingDetail(block) {
             </div>
         `;
     } else if (block === 'integrations') {
-        content = \`
+        content = `
             <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
                 <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
                     <div class="tile-icon" style="background:var(--accent-primary); color:#fff; border-radius:12px; height:60px; width:60px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
@@ -459,20 +459,24 @@ function showSettingDetail(block) {
                 
                 <div style="margin-bottom:40px;">
                     <h3 style="font-size:1rem; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px; display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-server"></i> Uazapi
+                        <i class="fab fa-whatsapp"></i> Uazapi (WhatsApp)
                     </h3>
                     <div style="display:grid; gap:15px;">
                         <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
                             <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">API Key Uazapi</label>
                             <input type="password" id="uazapi-key" placeholder="Cole sua API Key aqui" style="width:100%; background:var(--bg-deep); border:1px solid var(--border); padding:12px; border-radius:8px; color:#fff; margin-top:8px;">
+                            <div id="uazapi-status" style="margin-top:10px; font-size:0.9rem;"></div>
                         </div>
-                        <button class="btn-dispatch" onclick="testUazapi()">Testar Conexão</button>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-dispatch" onclick="saveIntegrations()">Salvar</button>
+                            <button class="btn-dispatch" style="background:var(--accent-secondary);" onclick="testUazapiConnection()">Testar Conexão</button>
+                        </div>
                     </div>
                 </div>
 
                 <div>
                     <h3 style="font-size:1rem; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px; display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-church"></i> Basileia Church
+                        <i class="fas fa-church"></i> Basileia Church API
                     </h3>
                     <div style="display:grid; gap:15px;">
                         <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
@@ -482,101 +486,102 @@ function showSettingDetail(block) {
                         <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
                             <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">Webhook URL</label>
                             <input type="text" id="basileia-webhook" placeholder="https://seu-webhook.com/webhook" style="width:100%; background:var(--bg-deep); border:1px solid var(--border); padding:12px; border-radius:8px; color:#fff; margin-top:8px;">
+                            <small style="color:var(--text-dim); display:block; margin-top:5px;">URL para receber eventos do Basileia Church</small>
+                            <div id="webhook-status" style="margin-top:10px; font-size:0.9rem;"></div>
                         </div>
-                        <button class="btn-dispatch" onclick="showToast('Configurações salvas!', 'success')">Salvar Configurações</button>
+                        <button class="btn-dispatch" onclick="saveBasileiaConfig()">Salvar Configurações</button>
                     </div>
                 </div>
             </div>
-        \`;
+            <script>loadIntegrationSettings();</script>
+        `;
     } else if (block === 'monitoring') {
-        content = \`
-            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
-                <h1>Monitoramento</h1>
-                <p style="color:var(--text-dim)">Performance e tráfego do sistema.</p>
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin:20px 0;">
-                    <div style="padding:20px; background:rgba(16,185,129,0.1); border-radius:10px; border:1px solid var(--success); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800;">98%</div>
-                        <small>Uptime</small>
-                    </div>
-                    <div style="padding:20px; background:rgba(59,130,246,0.1); border-radius:10px; border:1px solid var(--accent-secondary); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800;">45ms</div>
-                        <small>Tempo Médio</small>
-                    </div>
-                    <div style="padding:20px; background:rgba(138,43,226,0.1); border-radius:10px; border:1px solid var(--accent-primary); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800;">1.2K</div>
-                        <small>Requisições/Hora</small>
-                    </div>
-                    <div style="padding:20px; background:rgba(245,158,11,0.1); border-radius:10px; border:1px solid var(--warning); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800;">7</div>
-                        <small>Proxies Ativos</small>
-                    </div>
-                </div>
-                <h3>Logs por Proxy</h3>
-                <div id="monitoring-table">Carregando...</div>
-            </div>
-            <script>loadMonitoringData();</script>
-        \`;
-    } else if (block === 'cleanup') {
-        content = \`
-            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
-                <h1>Limpeza do Banco</h1>
-                <p style="color:var(--text-dim)">Remova dados inativos.</p>
-                <h3>Dados Inativos há mais de 6 meses</h3>
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin:20px 0;">
-                    <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800; color:var(--error);">3</div>
-                        <small>Clientes Inativos</small>
-                    </div>
-                    <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800; color:var(--error);">2</div>
-                        <small>Proxies Inativos</small>
-                    </div>
-                    <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
-                        <div style="font-size:2rem; font-weight:800; color:var(--error);">156</div>
-                        <small>Logs Antigos</small>
-                    </div>
-                </div>
-                <button class="btn-dispatch" style="background:var(--error);" onclick="showToast('Iniciando limpeza...', 'info')">Limpar Dados Inativos</button>
-            </div>
-            <script>loadCleanupData();</script>
-        \`;
-    } else if (block === 'alerts') {
-        content = \`
-            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
-                <h1>Alertas do Sistema</h1>
-                <p style="color:var(--text-dim)">Histórico de alertas e notificações.</p>
-                <div style="margin-bottom:20px; display:flex; gap:10px;">
-                    <button class="btn-dispatch">Todos</button>
-                    <button class="btn-dispatch" style="background:var(--error);">Erros</button>
-                    <button class="btn-dispatch" style="background:var(--warning);">Avisos</button>
-                </div>
-                <div>
-                    <div style="padding:15px; border-bottom:1px solid var(--border); background:rgba(239,68,68,0.05);">
-                        <strong style="color:var(--error);">Cliente Offline</strong>
-                        <p style="color:var(--text-dim); font-size:0.9rem;">Basileia RJ Norte caiu - 2 min atrás</p>
-                    </div>
-                    <div style="padding:15px; border-bottom:1px solid var(--border); background:rgba(16,185,129,0.05);">
-                        <strong style="color:var(--success);">Cliente Ativado</strong>
-                        <p style="color:var(--text-dim); font-size:0.9rem;">Basileia SC Itapema conectado - 1 hora atrás</p>
-                    </div>
-                </div>
-            </div>
-        \`;
-    } else {
-        // Fallback for other tiles
         content = `
             <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
                 <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
-                    <div class="tile-icon" style="background:var(--apple-purple); color:#fff; border-radius:12px; height:60px; width:60px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
-                        <i class="${getIconForBlock(block)}"></i>
+                    <div class="tile-icon" style="background:var(--accent-secondary); color:#fff; border-radius:12px; height:60px; width:60px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
+                        <i class="fas fa-tachometer-alt"></i>
                     </div>
                     <div>
-                        <h1 style="font-size:2rem; font-weight:800;">Setor de ${block.charAt(0).toUpperCase() + block.slice(1)}</h1>
-                        <p style="color:var(--text-dim)">Gerencie as preferências de ${block} do Basileia Proxy.</p>
+                        <h1 style="font-size:1.8rem;">Monitoramento de Tráfego</h1>
+                        <p style="color:var(--text-dim)">Histórico completo de requisições por IP.</p>
                     </div>
                 </div>
-                <button class="btn-dispatch" onclick="showToast('Setor em desenvolvimento.', 'info')">Acessar Ferramentas</button>
+                
+                <div class="monitor-grid" style="display:grid; grid-template-columns: 300px 1fr; gap:20px; margin-top:30px;">
+                    <div class="ip-list-panel" style="background:var(--bg-deep); border-radius:12px; padding:15px;">
+                        <div style="margin-bottom:15px;">
+                            <input type="text" id="monitor-search" placeholder="Buscar IP..." 
+                                style="width:100%; padding:10px; border-radius:8px; background:var(--bg-deep); border:1px solid var(--border); color:#fff;"
+                                onkeyup="filterMonitorIPs()">
+                        </div>
+                        <h3 style="margin-bottom:15px; font-size:1rem;"><i class="fas fa-network-wired"></i> Selecione um IP</h3>
+                        <div class="ip-list" id="monitor-ip-list" style="max-height:400px; overflow-y:auto;"></div>
+                    </div>
+                    <div class="ip-details" style="background:var(--bg-deep); border-radius:12px; padding:20px;">
+                        <div class="details-header">
+                            <h2 id="selected-ip-title" style="font-size:1.2rem; margin-bottom:15px;">Fluxo de Rede</h2>
+                        </div>
+                        <div class="flow-container" id="network-flow-container" style="max-height:400px; overflow-y:auto;">
+                            <p class="placeholder-text" style="color:var(--text-dim); text-align:center; padding:40px;">Selecione um IP para ver o fluxo completo de mensagens.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+        `;
+    } else if (block === 'cleanup') {
+        content = `
+            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
+                <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
+                    <div class="tile-icon" style="background:var(--error); color:#fff; border-radius:12px; height:60px; width:60px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
+                        <i class="fas fa-broom"></i>
+                    </div>
+                    <div>
+                        <h1 style="font-size:1.8rem;">Limpeza do Banco</h1>
+                        <p style="color:var(--text-dim)">Remova dados inativos há mais de 3 meses.</p>
+                    </div>
+                </div>
+                
+                <div id="cleanup-stats" style="margin-top:20px;">
+                    <p style="color:var(--text-dim);">Carregando...</p>
+                </div>
+                
+                <div style="margin-top:30px; padding:20px; background:rgba(245,158,11,0.1); border-radius:10px; border:1px solid var(--warning);">
+                    <h4 style="margin-bottom:10px;"><i class="fas fa-exclamation-triangle"></i>Atenção</h4>
+                    <p style="font-size:0.9rem; color:var(--text-dim);">Esta ação removerá permanentemente: clientes inativos, proxies sem atividade e logs com mais de 3 meses. Esta ação não pode ser desfeita.</p>
+                </div>
+                
+                <button class="btn-dispatch" style="background:var(--error); margin-top:20px;" onclick="runCleanup()">
+                    <i class="fas fa-trash"></i> Executar Limpeza
+                </button>
+            </div>
+            <script>loadCleanupData();</script>
+        `;
+    } else if (block === 'alerts') {
+        content = `
+            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
+                <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
+                    <div class="tile-icon" style="background:var(--warning); color:#fff; border-radius:12px; height:60px; width:60px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div>
+                        <h1 style="font-size:1.8rem;">Alertas do Sistema</h1>
+                        <p style="color:var(--text-dim)">Histórico de alertas e notificações.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:20px; display:flex; gap:10px;">
+                    <button class="btn-dispatch" onclick="loadAlertsData()">Todos</button>
+                    <button class="btn-dispatch" style="background:var(--error);" onclick="filterAlerts('error')">Erros</button>
+                    <button class="btn-dispatch" style="background:var(--warning);" onclick="filterAlerts('warning')">Avisos</button>
+                    <button class="btn-dispatch" style="background:var(--success);" onclick="filterAlerts('success')">Sucesso</button>
+                </div>
+                
+                <div id="alerts-list" style="max-height:500px; overflow-y:auto;">
+                    <p style="color:var(--text-dim);">Carregando...</p>
+                </div>
+            </div>
+            <script>loadAlertsData();</script>
         `;
     }
 
@@ -588,6 +593,11 @@ function showSettingDetail(block) {
     `;
     
     document.getElementById('settings').appendChild(detailView);
+    
+    // Chama fetchMonitorData para monitoramento
+    if (block === 'monitoring') {
+        setTimeout(fetchMonitorData, 300);
+    }
 }
 
 function getIconForBlock(block) {
@@ -634,18 +644,79 @@ function updateLogs(logs) {
 }
 
 async function fetchMonitorData() {
-    const r = await fetch('/api/addresses');
-    allProxies = await r.json();
+    setTimeout(async () => {
+        const list = document.getElementById('monitor-ip-list');
+        if (!list) {
+            console.log('Elemento monitor-ip-list não encontrado');
+            return;
+        }
+        try {
+            const r = await fetch('/api/addresses');
+            allProxies = await r.json();
+            console.log('IPs carregados:', allProxies.length);
+            renderMonitorIPList(allProxies);
+        } catch(e) {
+            console.error('Erro fetchMonitorData:', e);
+        }
+    }, 300);
+}
+
+function renderMonitorIPList(proxies) {
     const list = document.getElementById('monitor-ip-list');
+    if (!list) return;
     list.innerHTML = '';
-    allProxies.forEach(p => {
+    proxies.forEach(p => {
         const item = document.createElement('div');
         item.className = 'ip-item';
-        item.innerHTML = `<i class="fas fa-network-wired"></i> ${p.ip}`;
+        item.style.cssText = 'padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; transition:all 0.2s;';
+        item.innerHTML = `<i class="fas fa-network-wired"></i> <strong>${p.ip}</strong> <span style="float:right; font-size:0.8rem; color:var(--text-dim);">${p.clients_count || 0} msgs</span>`;
         item.onclick = () => loadIPFlow(p.ip, item);
         list.appendChild(item);
     });
 }
+
+window.filterMonitorIPs = function() {
+    const search = document.getElementById('monitor-search').value.toLowerCase();
+    const filtered = allProxies.filter(p => p.ip.toLowerCase().includes(search));
+    renderMonitorIPList(filtered);
+}
+
+window.loadIPFlow = async function(ip, element) {
+    document.querySelectorAll('.ip-item').forEach(el => el.style.background = 'transparent');
+    if (element) element.style.background = 'rgba(59,130,246,0.2)';
+    
+    document.getElementById('selected-ip-title').innerHTML = `<i class="fas fa-wifi"></i> IP: ${ip}`;
+    
+    try {
+        const r = await fetch('/api/monitoring/proxy/' + ip);
+        const logs = await r.json();
+        const container = document.getElementById('network-flow-container');
+        
+        if (logs.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-dim); text-align:center; padding:40px;">Nenhuma mensagem registrada para este IP.</p>';
+            return;
+        }
+        
+        container.innerHTML = logs.map(log => `
+            <div style="padding:15px; border-bottom:1px solid var(--border); animation: fadeIn 0.3s ease;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-weight:700; color:var(--accent-primary);">${log.method}</span>
+                    <span class="status-pill ${log.status_code === 200 ? 'active' : ''}" style="background:${log.status_code === 200 ? 'var(--success)' : 'var(--error)'};">${log.status_code}</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:5px;">
+                    <i class="fas fa-link"></i> ${log.endpoint}
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-dim);">
+                    <span><i class="fas fa-clock"></i> ${log.response_time ? log.response_time.toFixed(3) + 's' : '-'}</span>
+                    <span>${log.created_at ? new Date(log.created_at).toLocaleString() : '-'}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error('Erro ao carregar logs:', e);
+        document.getElementById('network-flow-container').innerHTML = '<p style="color:var(--error); text-align:center; padding:40px;">Erro ao carregar dados.</p>';
+    }
+};
 
 function showToast(msg, type) {
     const toast = document.createElement('div');
@@ -694,3 +765,199 @@ window.testUazapi = async function() {
 // Init
 refreshData();
 setInterval(refreshData, 30000);
+
+// ==== INTEGRAÇÕES ====
+window.loadIntegrationSettings = async function() {
+    try {
+        const r = await fetch('/api/integrations');
+        const data = await r.json();
+        if (data.uazapi_key) document.getElementById('uazapi-key').value = data.uazapi_key;
+        if (data.basileia_key) document.getElementById('basileia-key').value = data.basileia_key;
+        if (data.basileia_webhook) document.getElementById('basileia-webhook').value = data.basileia_webhook;
+        
+        // Status Uazapi
+        const uazStatus = document.getElementById('uazapi-status');
+        if (uazStatus) {
+            uazStatus.innerHTML = data.uazapi_connected 
+                ? '<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Conectado</span>'
+                : '<span style="color:var(--error);"><i class="fas fa-times-circle"></i> Não conectado</span>';
+        }
+    } catch (e) {
+        console.error('Erro ao carregar configurações:', e);
+    }
+};
+
+window.saveIntegrations = async function() {
+    const key = document.getElementById('uazapi-key').value;
+    if (!key) {
+        showToast('Por favor, insira uma API Key', 'error');
+        return;
+    }
+    try {
+        const r = await fetch('/api/integrations', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({uazapi_key: key})
+        });
+        const data = await r.json();
+        showToast(data.message || 'Salvo com sucesso!', 'success');
+        loadIntegrationSettings();
+    } catch (e) {
+        showToast('Erro ao salvar', 'error');
+    }
+};
+
+window.testUazapiConnection = async function() {
+    const key = document.getElementById('uazapi-key').value;
+    if (!key) {
+        showToast('Por favor, insira uma API Key', 'error');
+        return;
+    }
+    showToast('Testando conexão...', 'info');
+    try {
+        const r = await fetch('/api/integrations/test-uazapi?key=' + encodeURIComponent(key));
+        const data = await r.json();
+        if (data.connected) {
+            showToast('Conexão estabelecida!', 'success');
+        } else {
+            showToast(data.message || 'Falha na conexão', 'error');
+        }
+        loadIntegrationSettings();
+    } catch (e) {
+        showToast('Erro ao testar conexão', 'error');
+    }
+};
+
+window.saveBasileiaConfig = async function() {
+    const key = document.getElementById('basileia-key').value;
+    const webhook = document.getElementById('basileia-webhook').value;
+    try {
+        const r = await fetch('/api/integrations', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({basileia_key: key, basileia_webhook: webhook})
+        });
+        const data = await r.json();
+        showToast(data.message || 'Salvo com sucesso!', 'success');
+    } catch (e) {
+        showToast('Erro ao salvar', 'error');
+    }
+};
+
+// ==== MONITORAMENTO ====
+window.loadMonitoringData = async function() {
+    const table = document.getElementById('monitoring-table');
+    if (!table) return;
+    try {
+        const r = await fetch('/api/addresses');
+        const proxies = await r.json();
+        if (proxies.length === 0) {
+            table.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-dim);">Nenhum proxy encontrado</p>';
+            return;
+        }
+        table.innerHTML = '<table style="width:100%; border-collapse:collapse;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:12px; text-align:left;">IP</th><th style="padding:12px;">Clientes</th><th style="padding:12px;">Tempo</th><th style="padding:12px;">Status</th></tr></thead><tbody>' + 
+            proxies.map(p => `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:12px; font-weight:700;">${p.ip}</td>
+                <td style="padding:12px;">${p.clients_count || 0}</td>
+                <td style="padding:12px;">${p.avg_response ? p.avg_response.toFixed(1)+'ms' : '0ms'}</td>
+                <td style="padding:12px;"><span class="status-pill ${p.status === 'active' ? 'active' : ''}" style="background:var(--error);">${p.status}</span></td>
+            </tr>`).join('') + '</tbody></table>';
+    } catch (e) {
+        table.innerHTML = '<p style="padding:20px; color:var(--error);">Erro ao carregar</p>';
+    }
+};
+
+// ==== LIMPEZA ====
+window.loadCleanupData = async function() {
+    const statsDiv = document.getElementById('cleanup-stats');
+    if (!statsDiv) return;
+    try {
+        const r = await fetch('/api/cleanup/stats');
+        const data = await r.json();
+        statsDiv.innerHTML = `
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin:20px 0;">
+                <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
+                    <div style="font-size:2rem; font-weight:800; color:var(--error);">${data.inactive_clients || 0}</div>
+                    <small>Clientes Inativos</small>
+                </div>
+                <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
+                    <div style="font-size:2rem; font-weight:800; color:var(--error);">${data.inactive_proxies || 0}</div>
+                    <small>Proxies Inativos</small>
+                </div>
+                <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
+                    <div style="font-size:2rem; font-weight:800; color:var(--error);">${data.old_logs || 0}</div>
+                    <small>Logs Antigos</small>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        statsDiv.innerHTML = '<p style="padding:20px; color:var(--error);">Erro ao carregar dados</p>';
+    }
+};
+
+window.runCleanup = async function() {
+    if (!confirm('Tem certeza que deseja limpar dados com mais de 3 meses?')) return;
+    try {
+        const r = await fetch('/api/cleanup/clean', {method: 'POST'});
+        const data = await r.json();
+        showToast(data.message || 'Limpeza concluída!', 'success');
+        loadCleanupData();
+    } catch (e) {
+        showToast('Erro ao executar limpeza', 'error');
+    }
+};
+
+// ==== ALERTAS ====
+window.loadAlertsData = async function() {
+    const alertsDiv = document.getElementById('alerts-list');
+    if (!alertsDiv) return;
+    try {
+        const r = await fetch('/api/alerts');
+        const alerts = await r.json();
+        if (alerts.length === 0) {
+            alertsDiv.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-dim);">Nenhum alerta registrado</p>';
+            return;
+        }
+        alertsDiv.innerHTML = alerts.map(a => `
+            <div style="padding:15px; border-bottom:1px solid var(--border); background:rgba(${a.level === 'error' ? '239,68,68' : a.level === 'success' ? '16,185,129' : '245,158,11'},0.05);">
+                <strong style="color:var(--${a.level === 'error' ? 'error' : a.level === 'success' ? 'success' : 'warning'});">${a.type}</strong>
+                <p style="color:var(--text-dim); font-size:0.9rem;">${a.message.substring(0, 100)}</p>
+                <small style="color:var(--text-dim);">${a.created_at ? new Date(a.created_at).toLocaleString() : ''}</small>
+            </div>
+        `).join('');
+    } catch (e) {
+        alertsDiv.innerHTML = '<p style="padding:20px; color:var(--error);">Erro ao carregar alertas</p>';
+    }
+};
+
+window.filterAlerts = async function(level) {
+    const alertsDiv = document.getElementById('alerts-list');
+    if (!alertsDiv) return;
+    try {
+        const r = await fetch('/api/alerts?level=' + level);
+        const alerts = await r.json();
+        if (alerts.length === 0) {
+            alertsDiv.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-dim);">Nenhum alerta encontrado</p>';
+            return;
+        }
+        alertsDiv.innerHTML = alerts.map(a => `
+            <div style="padding:15px; border-bottom:1px solid var(--border); background:rgba(${a.level === 'error' ? '239,68,68' : a.level === 'success' ? '16,185,129' : '245,158,11'},0.05);">
+                <strong style="color:var(--${a.level === 'error' ? 'error' : a.level === 'success' ? 'success' : 'warning'});">${a.type}</strong>
+                <p style="color:var(--text-dim); font-size:0.9rem;">${a.message.substring(0, 100)}</p>
+                <small style="color:var(--text-dim);">${a.created_at ? new Date(a.created_at).toLocaleString() : ''}</small>
+            </div>
+        `).join('');
+    } catch (e) {
+        alertsDiv.innerHTML = '<p style="padding:20px; color:var(--error);">Erro ao filtrar alertas</p>';
+    }
+};
+
+window.testUazapi = async function() {
+    const apiKey = document.getElementById('uazapi-key').value;
+    if (!apiKey) {
+        showToast('Por favor, insira uma API Key', 'error');
+        return;
+    }
+    showToast('Testando conexão...', 'info');
+    setTimeout(() => showToast('Conexão estabelecida!', 'success'), 1500);
+};

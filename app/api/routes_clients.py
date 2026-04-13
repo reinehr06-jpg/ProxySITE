@@ -166,6 +166,20 @@ async def seed_data(db: Session = Depends(get_db)):
             # Simulated history logs
             if status == "active":
                 db.add(Log(client_id=c.id, old_proxy="0.0.0.0", new_proxy=target_proxy.ip, reason="Initial provisioning"))
+        
+        # Add Alerts for demo
+        from app.models.all_models import Alert
+        alerts_data = [
+            ("client_offline", "Basileia RJ Norte caiu - falha na conexão proxy", "error"),
+            ("client_active", "Basileia SC Itapema conectado com sucesso", "success"),
+            ("proxy_error", "Proxy 192.168.1.102 não responde há 5 minutos", "error"),
+            ("system_warning", "Uso de memória acima de 80%", "warning"),
+            ("integration_ok", "Uazapi API responds successfully", "success"),
+            ("client_disconnected", "Basileia BH Savassi desconectado", "error"),
+            ("backup_complete", "Backup automático concluído", "success"),
+        ]
+        for alert_type, msg, level in alerts_data:
+            db.add(Alert(type=alert_type, message=msg, level=level))
 
         # Add Network Logs for all proxies
         for p in proxies:

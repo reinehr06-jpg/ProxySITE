@@ -104,14 +104,17 @@ async def basileia_webhook(data: dict):
         db.close()
 
 @router.get("/alerts")
-async def get_alerts(limit: int = 50):
+async def get_alerts(limit: int = 50, level: str = None):
     """Retorna lista de alertas"""
     from app.core.database import SessionLocal
     from app.models.all_models import Alert
     
     db = SessionLocal()
     try:
-        alerts = db.query(Alert).order_by(Alert.created_at.desc()).limit(limit).all()
+        query = db.query(Alert).order_by(Alert.created_at.desc())
+        if level:
+            query = query.filter(Alert.level == level)
+        alerts = query.limit(limit).all()
         return [
             {
                 "id": a.id,
@@ -134,22 +137,27 @@ async def get_cleanup_stats():
     
     db = SessionLocal()
     try:
-        six_months_ago = datetime.now() - timedelta(days=180)
+        three_months_ago = datetime.now() - timedelta(days=90)
         
-        # Clientes inativos há mais de 6 meses
+        # Clientes inativos há mais de 3 meses
         inactive_clients = db.query(Client).filter(
             Client.status.in_(["error", "disconnected"]),
-            Client.last_switch < six_months_ago
+            Client.last_switch < three_months_ago
         ).count()
         
-        # Proxies sem atividade há mais de 6 meses
+        # Proxies sem atividade há mais de 3 meses
         inactive_proxies = db.query(Proxy).filter(
-            Proxy.last_check < six_months_ago
+            Proxy.last_check < three_months_ago
         ).count()
         
         # Logs antigos
         old_logs = db.query(Log).filter(
-            Log.created_at < six_months_ago
+            Log.created_at < three_months_ago
+        ).count()
+        
+        # Proxies sem atividade há mais de 3 meses
+        inactive_proxies = db.query(Proxy).filter(
+            Proxy.last_check < three_months_ago
         ).count()
         
         return {
@@ -169,7 +177,7 @@ async def clean_old_data():
     
     db = SessionLocal()
     try:
-        six_months_ago = datetime.now() - timedelta(days=180)
+        three_months_ago = datetime.now() - timedelta(days=90)
         
         # Contadores
         deleted_clients = 0
@@ -179,7 +187,7 @@ async def clean_old_data():
         # Deletar clientes inativos
         inactive_clients = db.query(Client).filter(
             Client.status.in_(["error", "disconnected"]),
-            Client.last_switch < six_months_ago
+            Client.last_switch < three_months_ago
         ).all()
         for c in inactive_clients:
             db.delete(c)
@@ -187,7 +195,7 @@ async def clean_old_data():
         
         # Deletar proxies sem atividade
         inactive_proxies = db.query(Proxy).filter(
-            Proxy.last_check < six_months_ago
+            Proxy.last_check < three_months_ago
         ).all()
         for p in inactive_proxies:
             db.delete(p)
@@ -195,7 +203,7 @@ async def clean_old_data():
         
         # Deletar logs antigos
         old_logs = db.query(Log).filter(
-            Log.created_at < six_months_ago
+            Log.created_at < three_months_ago
         ).all()
         for l in old_logs:
             db.delete(l)
