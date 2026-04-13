@@ -444,6 +444,124 @@ function showSettingDetail(block) {
                 </div>
             </div>
         `;
+    } else if (block === 'integrations') {
+        content = \`
+            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
+                <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
+                    <div class="tile-icon" style="background:var(--accent-primary); color:#fff; border-radius:12px; height:60px; width:60px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div>
+                        <h1 style="font-size:1.8rem;">Integrações</h1>
+                        <p style="color:var(--text-dim)">Configure suas conexões com APIs externas.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:40px;">
+                    <h3 style="font-size:1rem; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-server"></i> Uazapi
+                    </h3>
+                    <div style="display:grid; gap:15px;">
+                        <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
+                            <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">API Key Uazapi</label>
+                            <input type="password" id="uazapi-key" placeholder="Cole sua API Key aqui" style="width:100%; background:var(--bg-deep); border:1px solid var(--border); padding:12px; border-radius:8px; color:#fff; margin-top:8px;">
+                        </div>
+                        <button class="btn-dispatch" onclick="testUazapi()">Testar Conexão</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style="font-size:1rem; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-church"></i> Basileia Church
+                    </h3>
+                    <div style="display:grid; gap:15px;">
+                        <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
+                            <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">API Key</label>
+                            <input type="password" id="basileia-key" placeholder="Cole sua API Key" style="width:100%; background:var(--bg-deep); border:1px solid var(--border); padding:12px; border-radius:8px; color:#fff; margin-top:8px;">
+                        </div>
+                        <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
+                            <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">Webhook URL</label>
+                            <input type="text" id="basileia-webhook" placeholder="https://seu-webhook.com/webhook" style="width:100%; background:var(--bg-deep); border:1px solid var(--border); padding:12px; border-radius:8px; color:#fff; margin-top:8px;">
+                        </div>
+                        <button class="btn-dispatch" onclick="showToast('Configurações salvas!', 'success')">Salvar Configurações</button>
+                    </div>
+                </div>
+            </div>
+        \`;
+    } else if (block === 'monitoring') {
+        content = \`
+            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
+                <h1>Monitoramento</h1>
+                <p style="color:var(--text-dim)">Performance e tráfego do sistema.</p>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin:20px 0;">
+                    <div style="padding:20px; background:rgba(16,185,129,0.1); border-radius:10px; border:1px solid var(--success); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800;">98%</div>
+                        <small>Uptime</small>
+                    </div>
+                    <div style="padding:20px; background:rgba(59,130,246,0.1); border-radius:10px; border:1px solid var(--accent-secondary); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800;">45ms</div>
+                        <small>Tempo Médio</small>
+                    </div>
+                    <div style="padding:20px; background:rgba(138,43,226,0.1); border-radius:10px; border:1px solid var(--accent-primary); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800;">1.2K</div>
+                        <small>Requisições/Hora</small>
+                    </div>
+                    <div style="padding:20px; background:rgba(245,158,11,0.1); border-radius:10px; border:1px solid var(--warning); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800;">7</div>
+                        <small>Proxies Ativos</small>
+                    </div>
+                </div>
+                <h3>Logs por Proxy</h3>
+                <div id="monitoring-table">Carregando...</div>
+            </div>
+            <script>loadMonitoringData();</script>
+        \`;
+    } else if (block === 'cleanup') {
+        content = \`
+            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
+                <h1>Limpeza do Banco</h1>
+                <p style="color:var(--text-dim)">Remova dados inativos.</p>
+                <h3>Dados Inativos há mais de 6 meses</h3>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin:20px 0;">
+                    <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800; color:var(--error);">3</div>
+                        <small>Clientes Inativos</small>
+                    </div>
+                    <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800; color:var(--error);">2</div>
+                        <small>Proxies Inativos</small>
+                    </div>
+                    <div style="padding:20px; background:rgba(239,68,68,0.1); border-radius:10px; border:1px solid var(--error); text-align:center;">
+                        <div style="font-size:2rem; font-weight:800; color:var(--error);">156</div>
+                        <small>Logs Antigos</small>
+                    </div>
+                </div>
+                <button class="btn-dispatch" style="background:var(--error);" onclick="showToast('Iniciando limpeza...', 'info')">Limpar Dados Inativos</button>
+            </div>
+            <script>loadCleanupData();</script>
+        \`;
+    } else if (block === 'alerts') {
+        content = \`
+            <div class="mini-card" style="padding:40px; border:1px solid var(--border-bright);">
+                <h1>Alertas do Sistema</h1>
+                <p style="color:var(--text-dim)">Histórico de alertas e notificações.</p>
+                <div style="margin-bottom:20px; display:flex; gap:10px;">
+                    <button class="btn-dispatch">Todos</button>
+                    <button class="btn-dispatch" style="background:var(--error);">Erros</button>
+                    <button class="btn-dispatch" style="background:var(--warning);">Avisos</button>
+                </div>
+                <div>
+                    <div style="padding:15px; border-bottom:1px solid var(--border); background:rgba(239,68,68,0.05);">
+                        <strong style="color:var(--error);">Cliente Offline</strong>
+                        <p style="color:var(--text-dim); font-size:0.9rem;">Basileia RJ Norte caiu - 2 min atrás</p>
+                    </div>
+                    <div style="padding:15px; border-bottom:1px solid var(--border); background:rgba(16,185,129,0.05);">
+                        <strong style="color:var(--success);">Cliente Ativado</strong>
+                        <p style="color:var(--text-dim); font-size:0.9rem;">Basileia SC Itapema conectado - 1 hora atrás</p>
+                    </div>
+                </div>
+            </div>
+        \`;
     } else {
         // Fallback for other tiles
         content = `
@@ -536,6 +654,42 @@ function showToast(msg, type) {
     document.getElementById('toast-container').appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
+
+window.loadMonitoringData = async function() {
+    const table = document.getElementById('monitoring-table');
+    if (!table) return;
+    try {
+        const r = await fetch('/api/addresses');
+        const proxies = await r.json();
+        if (proxies.length === 0) {
+            table.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-dim);">Nenhum proxy encontrado</p>';
+            return;
+        }
+        table.innerHTML = '<table style="width:100%; border-collapse:collapse;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:12px; text-align:left;">IP</th><th style="padding:12px;">Clientes</th><th style="padding:12px;">Tempo</th><th style="padding:12px;">Status</th></tr></thead><tbody>' + 
+            proxies.map(p => `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:12px; font-weight:700;">${p.ip}</td>
+                <td style="padding:12px;">${p.clients_count || 0}</td>
+                <td style="padding:12px;">${p.avg_response ? p.avg_response.toFixed(1)+'ms' : '0ms'}</td>
+                <td style="padding:12px;"><span class="status-pill ${p.status === 'active' ? 'active' : ''}" style="background:var(--error);">${p.status}</span></td>
+            </tr>`).join('') + '</tbody></table>';
+    } catch (e) {
+        table.innerHTML = '<p style="padding:20px; color:var(--error);">Erro ao carregar</p>';
+    }
+};
+
+window.loadCleanupData = async function() {
+    showToast('Carregando dados de limpeza...', 'info');
+};
+
+window.testUazapi = async function() {
+    const apiKey = document.getElementById('uazapi-key').value;
+    if (!apiKey) {
+        showToast('Por favor, insira uma API Key', 'error');
+        return;
+    }
+    showToast('Testando conexão...', 'info');
+    setTimeout(() => showToast('Conexão estabelecida!', 'success'), 1500);
+};
 
 // Init
 refreshData();

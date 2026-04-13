@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste</title>
+</head>
+<body>
+    <h1>Teste de Login</h1>
+    <input type="text" id="username" value="admin">
+    <input type="password" id="password" value="admin">
+    <button onclick="testar()">Testar</button>
+    <p id="result"></p>
+    <script>
+        function testar() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            document.getElementById('result').innerText = 'User: ' + user + ', Pass: ' + pass;
+            if(user === 'admin' && pass === 'admin') {
+                alert('LOGIN OK!');
+            }
+        }
+    </script>
+</body>
+</html>

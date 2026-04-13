@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from app.api import routes_clients, routes_dispatch
+from app.api import routes_clients, routes_dispatch, routes_integrations
 from app.core.database import engine, Base
 import threading
 import time
@@ -14,6 +14,7 @@ app = FastAPI(title="Proxy Microservice")
 # Routes
 app.include_router(routes_clients.router, prefix="/api", tags=["clients"])
 app.include_router(routes_dispatch.router, prefix="/api", tags=["dispatch"])
+app.include_router(routes_integrations.router, prefix="/api", tags=["integrations"])
 
 # Static Files (Dashboard)
 app.mount("/dashboard", StaticFiles(directory="static", html=True), name="static")

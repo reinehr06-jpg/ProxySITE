@@ -66,3 +66,11 @@ class NetworkLog(Base):
     status_code = Column(Integer)
     response_time = Column(Float)
     created_at = Column(DateTime, server_default=func.now())
+
+class Alert(Base):
+    __tablename__ = "alerts"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    type = Column(String)
+    message = Column(String)
+    level = Column(String, default="info")  # info, warning, error, success
+    created_at = Column(DateTime, server_default=func.now())

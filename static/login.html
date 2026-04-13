@@ -3,331 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Login | ProxyManager Pro</title>
+    <title>Login | Basileia Proxy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --bg-deep: #0c0c16;             /* Deep Midnight Background */
-            --bg-surface: #161625;          /* Solid Surface for Cards */
-            --bg-sidebar: #10101d;          /* Sidebar Background */
-            --text-primary: #ffffff;        /* Pure White for maximum legibility */
-            --text-secondary: #e2e8f0;      /* Light Grey for labels */
-            --text-dim: #94a3b8;           /* Dimmed labels (still readable) */
-            --accent-primary: #8a2be2;      /* Electric Purple */
-            --accent-secondary: #0078d4;    /* Windows/Fluent Blue */
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --border: rgba(255, 255, 255, 0.1);
-            --border-bright: rgba(255, 255, 255, 0.2);
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
+            font-family: 'Inter', sans-serif;
+            background: #0c0c16;
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background-color: var(--bg-deep);
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            color: var(--text-primary);
+            color: #fff;
         }
-
         .login-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            padding: 50px 40px;
+            background: #161625;
+            padding: 40px;
             border-radius: 20px;
             width: 100%;
-            max-width: 420px;
+            max-width: 400px;
             text-align: center;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.5s ease-out;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-
-        .login-card h1 {
-            color: #fff;
-            margin-bottom: 10px;
-            font-size: 2.2rem;
-            font-weight: 800;
-        }
-
-        .login-card p {
-            color: var(--text-dim);
-            margin-bottom: 40px;
-            font-size: 0.95rem;
-        }
-
-        .input-group {
-            margin-bottom: 25px;
-            text-align: left;
-        }
-
-        .input-group label {
-            display: block;
-            color: #fff;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .input-wrapper i {
-            position: absolute;
-            left: 15px;
-            color: var(--text-dim);
-        }
-
-        .input-wrapper input {
+        h1 { margin-bottom: 10px; font-size: 2rem; }
+        p { color: #94a3b8; margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; }
+        .input-group input {
             width: 100%;
-            background: var(--bg-deep);
-            border: 2px solid var(--border);
-            padding: 14px 15px 14px 45px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: #0c0c16;
             color: #fff;
-            outline: none;
             font-size: 1rem;
-            transition: all 0.2s;
         }
-
-        .input-wrapper input:focus {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 4px rgba(138, 43, 226, 0.1);
-        }
-
+        .input-group input:focus { outline: none; border-color: #8a2be2; }
         .btn-login {
             width: 100%;
-            background: var(--accent-primary);
+            padding: 15px;
+            background: #8a2be2;
             color: #fff;
             border: none;
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: 800;
+            border-radius: 10px;
             font-size: 1rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 15px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            margin-top: 10px;
         }
-
-        .btn-login:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(138, 43, 226, 0.3);
-        }
-
+        .btn-login:hover { background: #7b25d1; }
         .error-msg {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
             color: #ef4444;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            margin-top: 15px;
             display: none;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            padding: 10px;
+            background: rgba(239,68,68,0.1);
+            border-radius: 8px;
         }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <h1>Basileia <b>Proxy</b></h1>
-        <p>Acesso Restrito ao Painel de Controle</p>
+        <h1>Basileia Proxy</h1>
+        <p>Faça login para continuar</p>
         
         <div class="input-group">
             <label>Usuário</label>
-            <div class="input-wrapper">
-                <i class="fas fa-user"></i>
-                <input type="text" id="username" placeholder="admin" autofocus>
-            </div>
+            <input type="text" id="username" placeholder="admin">
         </div>
         
-        <div class="input-group" style="margin-bottom: 30px;">
+        <div class="input-group">
             <label>Senha</label>
-            <div class="input-wrapper">
-                <i class="fas fa-lock"></i>
-                <input type="password" id="password" placeholder="••••••••">
-            </div>
-        </div>
-
-        <!-- SHOPEE STYLE PUZZLE CAPTCHA -->
-        <div id="captcha-container" style="margin-bottom: 25px; display: none; animation: fadeIn 0.4s ease;">
-            <div style="position: relative; width: 340px; height: 160px; border-radius: 12px; overflow: hidden; background: #000; margin: 0 auto; border: 1px solid var(--border-bright);">
-                <canvas id="captcha-bg" width="340" height="160"></canvas>
-                <canvas id="captcha-piece" width="340" height="160" style="position: absolute; left: 0; top: 0;"></canvas>
-            </div>
-            <div id="slider-track" style="position: relative; width: 340px; height: 40px; background: var(--bg-deep); border-radius: 20px; margin: 15px auto 0; border: 1px solid var(--border);">
-                <div id="slider-thumb" style="position: absolute; left: 0; top: -5px; width: 50px; height: 50px; background: var(--accent-primary); border-radius: 50%; cursor: grab; display: flex; align-items:center; justify-content:center; box-shadow: 0 4px 15px rgba(138,43,226,0.4); z-index: 10;">
-                    <i class="fas fa-angles-right" style="color:#fff;"></i>
-                </div>
-                <div style="text-align: center; line-height: 40px; font-size: 0.8rem; color: var(--text-dim); pointer-events: none;">Deslize para completar o quebra-cabeça</div>
-            </div>
+            <input type="password" id="password" placeholder="••••••••">
         </div>
         
-        <button id="login-btn" class="btn-login" onclick="preLoginCheck()">Entrar no Painel</button>
-        <div id="error-msg" class="error-msg">Credenciais inválidas ou captcha incorreto.</div>
+        <button class="btn-login" onclick="fazerLogin()">Entrar no Painel</button>
+        
+        <div id="error-msg" class="error-msg"></div>
     </div>
 
     <script>
-        let captchaSolved = false;
-        let targetX = 0;
-        let isDragging = false;
-        let startX = 0;
-
-        function initCaptcha() {
-            const container = document.getElementById('captcha-container');
-            const bgCanvas = document.getElementById('captcha-bg');
-            const pieceCanvas = document.getElementById('captcha-piece');
-            const thumb = document.getElementById('slider-thumb');
-            const bgCtx = bgCanvas.getContext('2d');
-            const pieceCtx = pieceCanvas.getContext('2d');
-
-            container.style.display = 'block';
-            captchaSolved = false;
-            thumb.style.left = '0px';
-            pieceCanvas.style.left = '0px';
-
-            // Random target position
-            targetX = 100 + Math.random() * 150;
-            let targetY = 30 + Math.random() * 80;
-
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.src = "https://picsum.photos/340/160?random=" + Math.random();
-            img.onload = () => {
-                // Draw background
-                bgCtx.drawImage(img, 0, 0);
-                
-                // Draw cutout hole
-                bgCtx.fillStyle = 'rgba(0,0,0,0.7)';
-                drawPuzzleShape(bgCtx, targetX, targetY);
-                bgCtx.fill();
-                bgCtx.stroke();
-
-                // Draw puzzle piece
-                pieceCtx.clearRect(0,0,340,160);
-                pieceCtx.save();
-                drawPuzzleShape(pieceCtx, targetX, targetY);
-                pieceCtx.clip();
-                pieceCtx.drawImage(img, 0, 0);
-                pieceCtx.restore();
-                
-                // Shift piece to start
-                const imageData = pieceCtx.getImageData(targetX, targetY - 15, 60, 60);
-                pieceCtx.clearRect(0,0,340,160);
-                pieceCtx.putImageData(imageData, 10, targetY - 15);
-            };
-        }
-
-        function drawPuzzleShape(ctx, x, y) {
-            const size = 45;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + size/2, y);
-            ctx.arc(x + size/2, y, 8, 0, Math.PI, true);
-            ctx.lineTo(x + size, y);
-            ctx.lineTo(x + size, y + size/2);
-            ctx.arc(x + size, y + size/2, 8, 1.5*Math.PI, 0.5*Math.PI, false);
-            ctx.lineTo(x + size, y + size);
-            ctx.lineTo(x, y + size);
-            ctx.lineTo(x, y);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#fff';
-        }
-
-        const thumb = document.getElementById('slider-thumb');
-        const piece = document.getElementById('captcha-piece');
-
-        thumb.addEventListener('mousedown', (e) => {
-            if (captchaSolved) return;
-            isDragging = true;
-            startX = e.clientX;
-            thumb.style.cursor = 'grabbing';
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            let moveX = e.clientX - startX;
-            if (moveX < 0) moveX = 0;
-            if (moveX > 290) moveX = 290;
-            thumb.style.left = moveX + 'px';
-            piece.style.left = moveX + 'px';
-        });
-
-        window.addEventListener('mouseup', () => {
-            if (!isDragging) return;
-            isDragging = false;
-            thumb.style.cursor = 'grab';
-
-            // Success check (targetX is where it WAS, it started at 10, so it needs to move targetX - 10)
-            const finalPos = parseInt(thumb.style.left);
-            const diff = Math.abs(finalPos - (targetX - 10));
-
-            if (diff < 5) {
-                captchaSolved = true;
-                thumb.style.background = 'var(--success)';
-                thumb.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => handleLogin(), 500);
-            } else {
-                thumb.style.left = '0';
-                piece.style.left = '0';
-                initCaptcha(); // Reset
-            }
-        });
-
-        function preLoginCheck() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            if (!user || !pass) {
-                document.getElementById('error-msg').style.display = 'block';
-                return;
-            }
-            if (document.getElementById('captcha-container').style.display === 'none') {
-                initCaptcha();
-            } else if (!captchaSolved) {
-                showSimpleToast("Complete o quebra-cabeça!");
-            }
-        }
-
-        async function handleLogin() {
+        function fazerLogin() {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
             const error = document.getElementById('error-msg');
             
-            if(user === 'admin' && pass === 'admin' && captchaSolved) {
+            if (user === 'admin' && pass === 'admin') {
                 localStorage.setItem('isAuthenticated', 'true');
                 window.location.href = '/dashboard';
             } else {
                 error.style.display = 'block';
-                captchaSolved = false;
-                initCaptcha();
+                error.innerText = 'Usuário ou senha incorretos';
             }
         }
-
-        function showSimpleToast(msg) {
-            // Simple visual feedback
-            const btn = document.getElementById('login-btn');
-            const originalText = btn.innerText;
-            btn.innerText = msg;
-            btn.style.background = 'var(--error)';
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.background = '';
-            }, 2000);
-        }
+    </script>
 </body>
 </html>
