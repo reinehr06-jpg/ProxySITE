@@ -139,6 +139,45 @@
             <div class="address-grid" id="address-grid"></div>
         </div>
 
+        <!-- IP Logs Tab -->
+        <div id="ip-logs" class="tab-content">
+            <header>
+                <button class="btn-logout" onclick="switchTab('addresses')" style="margin-bottom:15px;">
+                    <i class="fas fa-arrow-left"></i> Voltar aos Endereços
+                </button>
+                <div class="welcome">
+                    <h1 id="ip-logs-title">Logs do IP</h1>
+                    <p>Detalhes completos das transações interceptadas.</p>
+                </div>
+            </header>
+            
+            <div class="filter-bar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="ip-logs-search" placeholder="Buscar nos logs..." onkeyup="filterIPLogs()">
+                </div>
+            </div>
+            
+            <section class="table-section">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Hora</th>
+                                <th>Método</th>
+                                <th>Endpoint</th>
+                                <th>Status</th>
+                                <th>Tempo</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ip-logs-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
         <!-- Settings Tab (Windows 10 Style) -->
         <div id="settings" class="tab-content">
             <header class="win-settings-header">

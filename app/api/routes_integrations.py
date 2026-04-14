@@ -238,8 +238,12 @@ async def get_proxy_logs(proxy_ip: str):
                 "id": l.id,
                 "method": l.method,
                 "endpoint": l.endpoint,
+                "request_headers": l.request_headers,
+                "request_body": l.request_body,
+                "response_body": l.response_body,
                 "status_code": l.status_code,
                 "response_time": l.response_time,
+                "error_message": l.error_message,
                 "created_at": l.created_at.isoformat() if l.created_at else None
             }
             for l in logs

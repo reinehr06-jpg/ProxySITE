@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Float, Integer, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Float, Integer, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -63,8 +63,12 @@ class NetworkLog(Base):
     proxy_ip = Column(String, index=True)
     method = Column(String) 
     endpoint = Column(String)
+    request_headers = Column(Text)
+    request_body = Column(Text)
+    response_body = Column(Text)
     status_code = Column(Integer)
     response_time = Column(Float)
+    error_message = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
 
 class Alert(Base):

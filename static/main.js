@@ -37,6 +37,7 @@ async function refreshData() {
     await fetchStats();
     if (activeTab === 'clients') await fetchClients();
     if (activeTab === 'addresses') await fetchAddresses();
+    if (activeTab === 'ip-logs' && window.currentIP) await loadIPLogs(window.currentIP);
     if (activeTab === 'monitoramento') await fetchMonitorData();
 }
 
@@ -202,10 +203,19 @@ function renderAddresses(proxies) {
                 <p>IP: <strong>${p.ip}</strong></p>
                 <p>Carga: <span class="badge">${p.clients_count}/10</span></p>
             </div>
-            <button class="btn-dispatch" onclick="openReallocateModal('${p.id}')">REMANEJAR <i class="fas fa-exchange-alt"></i></button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-dispatch" onclick="selectIPFromAddress('${p.ip}')" style="flex:1;">VER LOGS <i class="fas fa-list"></i></button>
+                <button class="btn-dispatch" onclick="openReallocateModal('${p.id}')" style="flex:1;">REMANEJAR <i class="fas fa-exchange-alt"></i></button>
+            </div>
         `;
         container.appendChild(card);
     });
+}
+
+window.selectIPFromAddress = function(ip) {
+    window.currentIP = ip;
+    document.getElementById('ip-logs-title').innerHTML = `<i class="fas fa-wifi"></i> Logs: ${ip}`;
+    switchTab('ip-logs');
 }
 
 window.openReallocateModal = async function(proxyId) {
@@ -504,28 +514,18 @@ function showSettingDetail(block) {
                     </div>
                     <div>
                         <h1 style="font-size:1.8rem;">Monitoramento de Tráfego</h1>
-                        <p style="color:var(--text-dim)">Histórico completo de requisições por IP.</p>
+                        <p style="color:var(--text-dim)">Selecione um IP para filtrar.</p>
                     </div>
                 </div>
                 
-                <div class="monitor-grid" style="display:grid; grid-template-columns: 300px 1fr; gap:20px; margin-top:30px;">
-                    <div class="ip-list-panel" style="background:var(--bg-deep); border-radius:12px; padding:15px;">
-                        <div style="margin-bottom:15px;">
-                            <input type="text" id="monitor-search" placeholder="Buscar IP..." 
-                                style="width:100%; padding:10px; border-radius:8px; background:var(--bg-deep); border:1px solid var(--border); color:#fff;"
-                                onkeyup="filterMonitorIPs()">
-                        </div>
-                        <h3 style="margin-bottom:15px; font-size:1rem;"><i class="fas fa-network-wired"></i> Selecione um IP</h3>
-                        <div class="ip-list" id="monitor-ip-list" style="max-height:400px; overflow-y:auto;"></div>
+                <div style="margin-top:30px;">
+                    <div style="margin-bottom:15px;">
+                        <input type="text" id="monitor-search" placeholder="Buscar IP..." 
+                            style="width:100%; padding:10px; border-radius:8px; background:var(--bg-deep); border:1px solid var(--border); color:#fff;"
+                            onkeyup="filterMonitorIPs()">
                     </div>
-                    <div class="ip-details" style="background:var(--bg-deep); border-radius:12px; padding:20px;">
-                        <div class="details-header">
-                            <h2 id="selected-ip-title" style="font-size:1.2rem; margin-bottom:15px;">Fluxo de Rede</h2>
-                        </div>
-                        <div class="flow-container" id="network-flow-container" style="max-height:400px; overflow-y:auto;">
-                            <p class="placeholder-text" style="color:var(--text-dim); text-align:center; padding:40px;">Selecione um IP para ver o fluxo completo de mensagens.</p>
-                        </div>
-                    </div>
+                    <h3 style="margin-bottom:15px; font-size:1rem;"><i class="fas fa-network-wired"></i> Selecione um IP</h3>
+                    <div class="ip-list" id="monitor-ip-list" style="max-height:400px; overflow-y:auto;"></div>
                 </div>
             </div>
         `;
@@ -670,7 +670,7 @@ function renderMonitorIPList(proxies) {
         item.className = 'ip-item';
         item.style.cssText = 'padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; transition:all 0.2s;';
         item.innerHTML = `<i class="fas fa-network-wired"></i> <strong>${p.ip}</strong> <span style="float:right; font-size:0.8rem; color:var(--text-dim);">${p.clients_count || 0} msgs</span>`;
-        item.onclick = () => loadIPFlow(p.ip, item);
+        item.onclick = () => selectIP(p.ip, item);
         list.appendChild(item);
     });
 }
@@ -681,42 +681,164 @@ window.filterMonitorIPs = function() {
     renderMonitorIPList(filtered);
 }
 
-window.loadIPFlow = async function(ip, element) {
+window.currentIP = null;
+window.allIPLogs = [];
+
+window.selectIP = async function(ip, element) {
     document.querySelectorAll('.ip-item').forEach(el => el.style.background = 'transparent');
     if (element) element.style.background = 'rgba(59,130,246,0.2)';
     
-    document.getElementById('selected-ip-title').innerHTML = `<i class="fas fa-wifi"></i> IP: ${ip}`;
+    window.currentIP = ip;
+    document.getElementById('ip-logs-title').innerHTML = `<i class="fas fa-wifi"></i> Logs: ${ip}`;
+    switchTab('ip-logs');
+    await loadIPLogs(ip);
+}
+
+window.loadIPLogs = async function(ip) {
+    const tbody = document.getElementById('ip-logs-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center;">Carregando...</td></tr>';
     
     try {
         const r = await fetch('/api/monitoring/proxy/' + ip);
         const logs = await r.json();
-        const container = document.getElementById('network-flow-container');
+        
+        window.allIPLogs = logs;
         
         if (logs.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-dim); text-align:center; padding:40px;">Nenhuma mensagem registrada para este IP.</p>';
+            tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center; color:var(--text-dim);">Nenhuma transação registrada para este IP.</td></tr>';
             return;
         }
         
-        container.innerHTML = logs.map(log => `
-            <div style="padding:15px; border-bottom:1px solid var(--border); animation: fadeIn 0.3s ease;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="font-weight:700; color:var(--accent-primary);">${log.method}</span>
-                    <span class="status-pill ${log.status_code === 200 ? 'active' : ''}" style="background:${log.status_code === 200 ? 'var(--success)' : 'var(--error)'};">${log.status_code}</span>
-                </div>
-                <div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:5px;">
-                    <i class="fas fa-link"></i> ${log.endpoint}
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-dim);">
-                    <span><i class="fas fa-clock"></i> ${log.response_time ? log.response_time.toFixed(3) + 's' : '-'}</span>
-                    <span>${log.created_at ? new Date(log.created_at).toLocaleString() : '-'}</span>
-                </div>
-            </div>
-        `).join('');
+        renderIPLogs(logs);
     } catch (e) {
         console.error('Erro ao carregar logs:', e);
-        document.getElementById('network-flow-container').innerHTML = '<p style="color:var(--error); text-align:center; padding:40px;">Erro ao carregar dados.</p>';
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center; color:var(--error);">Erro ao carregar dados.</td></tr>';
     }
-};
+}
+
+window.renderIPLogs = function(logs) {
+    const tbody = document.getElementById('ip-logs-table-body');
+    if (!tbody) return;
+    
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center; color:var(--text-dim);">Nenhuma transação encontrada</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = logs.map(log => {
+        const date = log.created_at ? new Date(log.created_at) : null;
+        const day = date ? date.toLocaleDateString('pt-BR') : '-';
+        const time = date ? date.toLocaleTimeString('pt-BR') : '-';
+        const isSuccess = log.status_code === 200;
+        return `
+            <tr>
+                <td style="padding:12px;">${day}</td>
+                <td style="padding:12px;">${time}</td>
+                <td style="padding:12px; font-weight:700; color:var(--accent-primary);">${log.method || '-'}</td>
+                <td style="padding:12px; color:var(--text-dim); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${log.endpoint || ''}">${log.endpoint || '-'}</td>
+                <td style="padding:12px; text-align:center;">
+                    <span style="background:${isSuccess ? 'var(--success)' : 'var(--error)'}; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:600;">${log.status_code || '-'}</span>
+                </td>
+                <td style="padding:12px; text-align:right; color:var(--text-dim);">${log.response_time ? (log.response_time * 1000).toFixed(0) + 'ms' : '-'}</td>
+                <td style="padding:12px; text-align:center;">
+                    <button class="btn-logout" onclick="showLogDetail('${log.id}')" style="padding:5px 10px; font-size:0.8rem;">
+                        <i class="fas fa-eye"></i> Ver
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.filterIPLogs = function() {
+    const search = document.getElementById('ip-logs-search').value.toLowerCase();
+    const filtered = window.allIPLogs.filter(log => 
+        (log.method || '').toLowerCase().includes(search) ||
+        (log.endpoint || '').toLowerCase().includes(search) ||
+        (log.error_message || '').toLowerCase().includes(search)
+    );
+    renderIPLogs(filtered);
+}
+
+window.showLogDetail = function(logId) {
+    const log = window.allIPLogs.find(l => l.id === logId);
+    if (!log) return;
+    
+    const date = log.created_at ? new Date(log.created_at) : null;
+    const isSuccess = log.status_code === 200;
+    
+    const detailHtml = `
+        <div style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:1000; display:flex; align-items:center; justify-content:center;" onclick="this.remove();">
+            <div style="background:var(--bg-deep); border-radius:12px; padding:30px; max-width:900px; width:90%; max-height:90vh; overflow-y:auto;" onclick="event.stopPropagation();">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="font-size:1.5rem;"><i class="fas fa-file-alt"></i> Detalhes da Transação</h2>
+                    <button class="btn-logout" onclick="this.closest('[style*=&quot;position:fixed&quot;]').remove();" style="padding:8px 15px;">
+                        <i class="fas fa-times"></i> Fechar
+                    </button>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div style="padding:15px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                        <strong style="color:var(--accent-primary);">Método</strong>
+                        <p style="font-size:1.2rem; font-weight:700;">${log.method || '-'}</p>
+                    </div>
+                    <div style="padding:15px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                        <strong style="color:var(--accent-primary);">Status</strong>
+                        <p style="font-size:1.2rem; font-weight:700; color:${isSuccess ? 'var(--success)' : 'var(--error)'};">${log.status_code || '-'}</p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:20px;">
+                    <strong style="color:var(--accent-primary);">Endpoint</strong>
+                    <p style="padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; word-break:break-all;">${log.endpoint || '-'}</p>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div>
+                        <strong style="color:var(--accent-primary);">Data</strong>
+                        <p style="color:var(--text-dim);">${date ? date.toLocaleString('pt-BR') : '-'}</p>
+                    </div>
+                    <div>
+                        <strong style="color:var(--accent-primary);">Tempo de Resposta</strong>
+                        <p style="color:var(--text-dim);">${log.response_time ? (log.response_time * 1000).toFixed(2) + 'ms' : '-'}</p>
+                    </div>
+                </div>
+                
+                ${log.request_headers ? `
+                    <div style="margin-bottom:20px;">
+                        <strong style="color:var(--accent-primary);">Requisição Headers</strong>
+                        <pre style="padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; overflow-x:auto; font-size:0.8rem; max-height:200px;">${log.request_headers}</pre>
+                    </div>
+                ` : ''}
+                
+                ${log.request_body ? `
+                    <div style="margin-bottom:20px;">
+                        <strong style="color:var(--accent-primary);">Request Body</strong>
+                        <pre style="padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; overflow-x:auto; font-size:0.8rem; max-height:200px; word-break:break-all;">${log.request_body}</pre>
+                    </div>
+                ` : ''}
+                
+                ${log.response_body ? `
+                    <div style="margin-bottom:20px;">
+                        <strong style="color:var(--accent-primary);">Response Body</strong>
+                        <pre style="padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; overflow-x:auto; font-size:0.8rem; max-height:300px; word-break:break-all;">${log.response_body}</pre>
+                    </div>
+                ` : ''}
+                
+                ${log.error_message ? `
+                    <div style="margin-bottom:20px; padding:15px; background:rgba(239,68,68,0.1); border-radius:8px; border:1px solid var(--error);">
+                        <strong style="color:var(--error);">Mensagem de Erro</strong>
+                        <p style="color:var(--error);">${log.error_message}</p>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', detailHtml);
+}
 
 function showToast(msg, type) {
     const toast = document.createElement('div');
