@@ -126,14 +126,11 @@ app.include_router(events_pairing_router, prefix="/vault/api", tags=["Vault - Pa
 async def health_check():
     return {"status": "healthy"}
 
+from fastapi.responses import RedirectResponse
+
 @app.get("/")
 async def root():
-    return {
-        "message": "Basileia API",
-        "docs": "/docs",
-        "login": "/login.html",
-        "vault": "/vault/",
-    }
+    return RedirectResponse(url="/login.html")
 
 # Static files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
