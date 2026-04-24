@@ -122,10 +122,6 @@ app.include_router(events_logs_router, prefix="/vault/api", tags=["Vault - Logs"
 app.include_router(events_webhooks_router, prefix="/vault/api", tags=["Vault - Webhooks"])
 app.include_router(events_pairing_router, prefix="/vault/api", tags=["Vault - Pairing"])
 
-# Static files
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
@@ -138,6 +134,9 @@ async def root():
         "login": "/login.html",
         "vault": "/vault/",
     }
+
+# Static files
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 @app.get("/api/health")
