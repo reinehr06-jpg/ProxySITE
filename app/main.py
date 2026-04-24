@@ -48,102 +48,31 @@ async def secure_events_auth_middleware(request: Request, call_next):
     
     # Rotas públicas que não precisam de token (APENAS login)
     public_routes = [
-        "/secure-events/api/auth/login",
-        "/secure-events/api/auth/register", 
-        "/secure-events/api/auth/refresh",
-        "/secure-events/api/checkin/validate",
-        "/secure-events/api/webhooks/",
-        "/docs",
-        "/redoc",
-        "/openapi.json"
-    ]
-    
-    # Verifica exacte match para rotas públicas
-    for public in public_routes:
-        if path == public:
-            return await call_next(request)
-    
-    # Pages HTML precisam token (exceto login)
-    if path.startswith("/secure-events/") and path.endswith(".html"):
-        # Login page is public
-        if path == "/secure-events/index.html":
-            return await call_next(request)
-        
-        # Other pages need token
-        token = request.query_params.get("token")
-        if token:
-            username = validate_cross_system_token(token)
-            if username:
-                request.state.cross_system_user = username
-                return await call_next(request)
-        
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Token requerido. Acesse pelo Dashboard do Proxy."}
-        )
-    
-    # API precisa token
-    if path.startswith("/secure-events/api/"):
-        token = request.query_params.get("token")
-        if token:
-            username = validate_cross_system_token(token)
-            if username:
-                request.state.cross_system_user = username
-                return await call_next(request)
-        
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Token inválido ou expirado"}
-        )
-    
-    return await call_next(request)
+"/vault/api/auth/login",
+        "/vault/api/auth/register", 
+        "/vault/api/auth/refresh",
+        "/vault/api/checkin/validate",
+        "/vault/api/webhooks/",
 
-app.state.limiter = limiter
-add_security_middleware(app)
+        if path.startswith("/vault/") and path.endswith(".html"):
 
-app.include_router(routes_auth.router, prefix="/api", tags=["Authentication"])
-app.include_router(routes_clients.router, prefix="/api", tags=["Clients"])
-app.include_router(routes_dispatch.router, prefix="/api", tags=["Dispatch"])
-app.include_router(routes_integrations.router, prefix="/api", tags=["Integrations"])
+        if path == "/vault/index.html":
 
-# Secure Events Subsystem Routes
-from app.api.events import (
-    events_auth_router,
-    events_events_router,
-    events_faces_router,
-    events_checkin_router,
-    events_recognize_router,
-    events_totems_router,
-    events_logs_router,
-    events_webhooks_router,
-    events_pairing_router
-)
+        if path.startswith("/vault/api/"):
 
-app.include_router(events_auth_router, prefix="/secure-events/api", tags=["Secure Events - Auth"])
-app.include_router(events_events_router, prefix="/secure-events/api", tags=["Secure Events - Events"])
-app.include_router(events_faces_router, prefix="/secure-events/api", tags=["Secure Events - Faces"])
-app.include_router(events_checkin_router, prefix="/secure-events/api", tags=["Secure Events - Check-in"])
-app.include_router(events_recognize_router, prefix="/secure-events/api", tags=["Secure Events - Recognize"])
-app.include_router(events_totems_router, prefix="/secure-events/api", tags=["Secure Events - Totems"])
-app.include_router(events_logs_router, prefix="/secure-events/api", tags=["Secure Events - Logs"])
-app.include_router(events_webhooks_router, prefix="/secure-events/api", tags=["Secure Events - Webhooks"])
-app.include_router(events_pairing_router, prefix="/secure-events/api", tags=["Secure Events - Pairing"])
+app.include_router(events_auth_router, prefix="/vault/api", tags=["Basileia Vault - Auth"])
+app.include_router(events_events_router, prefix="/vault/api", tags=["Basileia Vault - Events"])
+app.include_router(events_faces_router, prefix="/vault/api", tags=["Basileia Vault - Faces"])
+app.include_router(events_checkin_router, prefix="/vault/api", tags=["Basileia Vault - Check-in"])
+app.include_router(events_recognize_router, prefix="/vault/api", tags=["Basileia Vault - Recognize"])
+app.include_router(events_totems_router, prefix="/vault/api", tags=["Basileia Vault - Totems"])
+app.include_router(events_logs_router, prefix="/vault/api", tags=["Basileia Vault - Logs"])
+app.include_router(events_webhooks_router, prefix="/vault/api", tags=["Basileia Vault - Webhooks"])
+app.include_router(events_pairing_router, prefix="/vault/api", tags=["Basileia Vault - Pairing"])
 
-# Static files for Secure Events frontend
-app.mount("/dashboard", StaticFiles(directory="static", html=True), name="static")
-app.mount("/secure-events", StaticFiles(directory="static/secure-events", html=True), name="secure-events")
+app.mount("/vault", StaticFiles(directory="static/vault", html=True), name="vault")
 
-# Scheduler for jobs
-scheduler = AsyncIOScheduler()
-
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Proxy Microservice API is running",
-        "docs": "/docs",
-        "dashboard": "/dashboard",
-        "secure_events": "/secure-events"
+            "vault": "/vault"
     }
 
 

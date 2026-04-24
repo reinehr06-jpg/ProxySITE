@@ -21,7 +21,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return hashlib.sha256(plain.encode()).hexdigest() == hashed
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/secure-events/api/auth/login"
+    tokenUrl="/vault/api/auth/login"
 )
 
 

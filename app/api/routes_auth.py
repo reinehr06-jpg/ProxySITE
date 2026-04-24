@@ -345,7 +345,7 @@ async def generate_cross_system_token(current_user: User = Depends(get_current_u
     
     return {
         "token": token,
-        "url": f"/secure-events/?token={token}",
+        "url": f"/vault/?token={token}",
         "expires_in": 300  # 5 minutes
     }
 
