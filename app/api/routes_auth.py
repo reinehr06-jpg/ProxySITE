@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 CAPTCHA_STORE = {}  # {captcha_id: answer}
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(tags=["Authentication"])
 
 
 @router.get("/security-check")
