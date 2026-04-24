@@ -21,3 +21,6 @@ opencv-python-headless==4.9.0.80
 apscheduler==3.10.4
 pyotp==2.9.0
 qrcode==7.4.2
+email-validator==2.1.0.post1
+python-multipart==0.0.9
+cryptography==42.0.5
