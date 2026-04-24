@@ -47,6 +47,13 @@ class UazapiService:
             print(f"Error getting instance: {e}")
             return None
 
+    def get_status(self, instance_id: str):
+        """GET /instance/{id} - Atalho para ver status da instância"""
+        data = self.get_instance(instance_id)
+        if data and "instance" in data:
+            return {"status": data["instance"].get("status", "disconnected")}
+        return {"status": "disconnected"}
+
     def set_proxy(self, instance_id: str, proxy_host: str, proxy_port: int, proxy_username: str = None, proxy_password: str = None):
         """
         POST /instance/proxy - Define proxy para uma instância

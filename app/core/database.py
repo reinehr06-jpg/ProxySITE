@@ -60,26 +60,16 @@ Base = declarative_base()
 
 
 def get_db():
-    """Dependência do banco do proxy (existente)"""
+    """Dependência do banco do proxy"""
     db = SessionProxy()
     try:
         yield db
     finally:
         db.close()
-
 
 def get_db_secure():
     """Dependência do banco do Secure Events - tenta separado, fallback para proxy"""
     db = SessionSecure()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def get_db():
-    """Dependência do banco do proxy"""
-    db = SessionProxy()
     try:
         yield db
     finally:
