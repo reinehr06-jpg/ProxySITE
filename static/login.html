@@ -54,11 +54,17 @@
                     <label>Senha</label>
                     <input type="password" id="password" required placeholder="••••••••">
                 </div>
-                <div class="captcha-box">
-                    <span id="captcha-question" style="color: #fff; font-weight: 700;">? + ? = </span>
-                    <input type="text" id="captcha-answer" placeholder="Resposta" required style="flex:1;">
+                <div class="input-group">
+                    <label>Segurança (Resolva a conta)</label>
+                    <div class="captcha-box">
+                        <div id="captcha-question" style="color: #a78bfa; font-weight: 800; font-size: 1.1rem; min-width: 80px; letter-spacing: 1px;">...</div>
+                        <input type="text" id="captcha-answer" placeholder="Resultado" required>
+                        <button type="button" onclick="loadCaptcha()" style="background: none; border: none; color: #6366f1; cursor: pointer; padding: 5px;" title="Recarregar">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
                 </div>
-                <button type="submit" class="btn">Entrar</button>
+                <button type="submit" class="btn">Entrar no Sistema</button>
             </form>
         </div>
         
