@@ -10,9 +10,12 @@ python-multipart
 passlib[bcrypt]
 python-jose[cryptography]
 slowapi
-boto3>=1.34.0
-httpx>=0.27.0
-Pillow>=10.0.0
-opencv-python-headless>=4.9.0
-aioboto3>=12.0.0
-apscheduler>=3.10.0
+# Pinning AWS/Async stack to resolve backtracking in pip (fixes 30min deploy)
+botocore==1.34.34
+aiobotocore==2.11.2
+aioboto3==12.3.0
+boto3==1.34.34
+httpx==0.27.0
+Pillow==10.2.0
+opencv-python-headless==4.9.0.80
+apscheduler==3.10.4

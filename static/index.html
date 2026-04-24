@@ -32,6 +32,55 @@
     </nav>
 
     <main class="content">
+        <!-- Top Nav Actions -->
+        <div class="top-nav-actions">
+            <div class="systems-switcher">
+                <button class="switcher-btn" id="switcher-btn" onclick="toggleSystems()">
+                    <i class="fas fa-th"></i>
+                </button>
+                <div class="switcher-dropdown" id="switcher-dropdown">
+                    <div class="dropdown-title">Sistemas Basiléia</div>
+                    <div class="dropdown-grid">
+                        <a href="https://dash.basileia.global/login" class="system-item">
+                            <div class="system-icon church">
+                                <i class="fas fa-church"></i>
+                            </div>
+                            <span>Church</span>
+                        </a>
+                        <a href="https://fin.basileia.global/dashboard" class="system-item">
+                            <div class="system-icon finance">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <span>Finance</span>
+                        </a>
+                        <a href="https://Secure.basileia.global/login" class="system-item">
+                            <div class="system-icon checkout">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <span>Checkout</span>
+                        </a>
+                        <a href="https://Vendor.basileia.global/login" class="system-item">
+                            <div class="system-icon vendor">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <span>Vendor</span>
+                        </a>
+                        <a href="https://vault.basileia.global" class="system-item">
+                            <div class="system-icon vault">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <span>Vault</span>
+                        </a>
+                        <a href="https://prox.basileia.global/" class="system-item active">
+                            <div class="system-icon proxy">
+                                <i class="fas fa-network-wired"></i>
+                            </div>
+                            <span>Proxy</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Dashboard Tab -->
         <div id="dashboard" class="tab-content active">
             <!-- 4 KPI Squares -->

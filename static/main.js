@@ -394,7 +394,7 @@ function showSettingDetail(block) {
                     </div>
                     <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
                         <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">E-mail Administrativo</label>
-                        <p style="font-weight:700; margin-top:5px;">Adm@Proxy.Basileia</p>
+                        <p style="font-weight:700; margin-top:5px;">Vault.basileia@basileia.global</p>
                     </div>
                     <div class="info-box" style="padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
                         <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:800;">IP da Sessão Atual</label>
@@ -1112,3 +1112,17 @@ window.testUazapi = async function() {
     showToast('Testando conexão...', 'info');
     setTimeout(() => showToast('Conexão estabelecida!', 'success'), 1500);
 };
+// Systems Switcher Logic
+function toggleSystems() {
+    const dropdown = document.getElementById('switcher-dropdown');
+    dropdown.classList.toggle('active');
+}
+
+// Close switcher when clicking outside
+window.addEventListener('click', function(e) {
+    const switcher = document.querySelector('.systems-switcher');
+    const dropdown = document.getElementById('switcher-dropdown');
+    if (switcher && !switcher.contains(e.target)) {
+        dropdown.classList.remove('active');
+    }
+});

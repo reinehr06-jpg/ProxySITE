@@ -652,3 +652,121 @@ td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12p
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+/* Systems Switcher - Premium Look */
+.top-nav-actions {
+    position: absolute;
+    top: 30px;
+    right: 60px;
+    z-index: 500;
+}
+
+.switcher-btn {
+    width: 45px;
+    height: 45px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.switcher-btn:hover {
+    background: var(--border-bright);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+}
+
+.switcher-dropdown {
+    position: absolute;
+    top: 60px;
+    right: 0;
+    width: 280px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    backdrop-filter: blur(20px);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease;
+}
+
+.switcher-dropdown.active {
+    display: flex;
+}
+
+.dropdown-title {
+    padding: 20px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+}
+
+.dropdown-grid {
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.system-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border-radius: 15px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid transparent;
+}
+
+.system-item:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--border-bright);
+    transform: scale(1.02);
+}
+
+.system-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.system-icon.finance {
+    color: #8a2be2;
+    background: rgba(138, 43, 226, 0.1);
+}
+
+.system-icon.vault {
+    color: #0078d4;
+    background: rgba(0, 120, 212, 0.1);
+}
+
+.system-item span {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -262,8 +262,18 @@ async def seed_data(
         db.query(NetworkLog).delete()
         db.query(Client).delete()
         db.query(Proxy).delete()
+        db.query(User).delete()
         db.commit()
-        
+        # 2. Add New Data
+        # Add Admin User
+        from app.core.auth import get_password_hash
+        admin_user = User(
+            id=str(uuid.uuid4()),
+            username="Vault.basileia@basileia.global",
+            hashed_password=get_password_hash("admin"),
+            is_active=True
+        )
+        db.add(admin_user)
         states = [
             ("SC", "Joinville", "Samsung Galaxy S23", -26.30, -48.84),
             ("SP", "São Paulo", "iPhone 15 Pro", -23.55, -46.63),
