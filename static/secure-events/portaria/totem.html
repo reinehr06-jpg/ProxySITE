@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Reconhecimento Facial - Portaria</title>
+    <link rel="stylesheet" href="../css/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; height: 100vh; }
+        
+        .camera-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        .camera-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        
+        .camera-header { background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .camera-header h2 { color: white; font-size: 1.2rem; }
+        .back-btn { background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 20px; text-decoration: none; }
+        
+        .face-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 360px; border: 3px solid var(--primary); border-radius: 140px 140px 100px 100px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 50px rgba(99,102,241,0.3); }
+        .face-frame::before { content: 'Posicione o rosto aqui'; position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 0.9rem; white-space: nowrap; }
+        
+        .face-frame.scanning { animation: pulse 1.5s infinite; border-color: var(--warning); }
+        .face-frame.success { border-color: var(--success); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 100px rgba(16,185,129,0.5); }
+        .face-frame.error { border-color: var(--error); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 100px rgba(239,68,68,0.5); }
+        
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 50px rgba(245,158,11,0.3); } 50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 80px rgba(245,158,11,0.6); } }
+        
+        .camera-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 30px; text-align: center; }
+        .camera-footer p { color: rgba(255,255,255,0.7); font-size: 1rem; }
+        
+        .status-indicator { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 10px 30px; border-radius: 20px; color: white; font-weight: 600; display: none; }
+        .status-indicator.show { display: block; }
+        .status-indicator.scanning { color: var(--warning); }
+        .status-indicator.success { color: var(--success); }
+        .status-indicator.error { color: var(--error); }
+        
+        .result-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 100; }
+        .result-overlay.show { display: flex; }
+        .result-icon { width: 150px; height: 150px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 5rem; margin-bottom: 30px; animation: popIn 0.5s ease; }
+        .result-success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 4px solid var(--success); }
+        .result-error { background: rgba(239, 68, 68, 0.2); color: var(--error); border: 4px solid var(--error); }
+        .result-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 4px solid var(--warning); }
+        .result-title { font-size: 2.5rem; font-weight: 700; margin-bottom: 15px; color: white; }
+        .result-message { color: var(--text-muted); font-size: 1.2rem; margin-bottom: 40px; }
+        .result-btn { padding: 18px 50px; font-size: 1.2rem; border-radius: 30px; }
+        
+        @keyframes popIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .countdown { font-size: 3rem; font-weight: 700; color: white; }
+    </style>
+</head>
+<body>
+    <div class="camera-container">
+        <video id="video" autoplay playsinline></video>
+    </div>
+    
+    <div class="camera-overlay">
+        <div class="camera-header">
+            <h2><i class="fas fa-face-smile"></i> Reconhecimento Facial</h2>
+            <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> Voltar</a>
+        </div>
+        
+        <div class="status-indicator" id="status-indicator">
+            <i class="fas fa-spinner fa-spin"></i> <span id="status-text">Iniciando...</span>
+        </div>
+        
+        <div class="face-frame" id="face-frame"></div>
+        
+        <div class="camera-footer">
+            <p id="instruction">Aguarde, detectando rosto...</p>
+        </div>
+    </div>
+    
+    <div class="result-overlay" id="result-overlay">
+        <div class="result-icon" id="result-icon">
+            <i class="fas fa-check" id="result-icon-icon"></i>
+        </div>
+        <div class="result-title" id="result-title">Acesso Liberado</div>
+        <div class="result-message" id="result-message">Ticket #123456</div>
+        <button class="btn btn-primary result-btn" onclick="resetScanner()">Escanear Novamente</button>
+    </div>
+    
+    <script src="../js/api.js"></script>
+    <script>
+        const API_BASE = '/secure-events/api';
+        const video = document.getElementById('video');
+        const faceFrame = document.getElementById('face-frame');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const instruction = document.getElementById('instruction');
+        
+        let totemKey = localStorage.getItem('portaria_totem_key');
+        let currentEventId = '';
+        let stream = null;
+        let isProcessing = false;
+        let canvas;
+        
+        // Audio
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playBeep(type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 'success') {
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+            } else if (type === 'warning') {
+                osc.frequency.value = 440;
+                osc.type = 'sine';
+            } else {
+                osc.frequency.value = 220;
+                osc.type = 'square';
+            }
+            
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.4);
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+        
+        function vibrate(type) {
+            if (navigator.vibrate) {
+                if (type === 'success') navigator.vibrate([100, 50, 100]);
+                else if (type === 'warning') navigator.vibrate([50, 30, 50]);
+                else navigator.vibrate([200, 100, 200]);
+            }
+        }
+        
+        function showResult(type, title, message) {
+            const overlay = document.getElementById('result-overlay');
+            const icon = document.getElementById('result-icon');
+            const iconIcon = document.getElementById('result-icon-icon');
+            const titleEl = document.getElementById('result-title');
+            const messageEl = document.getElementById('result-message');
+            
+            icon.className = 'result-icon result-' + type;
+            iconIcon.className = type === 'success' ? 'fas fa-check' : type === 'warning' ? 'fas fa-exclamation' : 'fas fa-times';
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            overlay.classList.add('show');
+            playBeep(type);
+            vibrate(type);
+        }
+        
+        function setStatus(status, text) {
+            statusIndicator.className = 'status-indicator show ' + status;
+            statusText.innerHTML = `<i class="fas fa-${status === 'scanning' ? 'spinner fa-spin' : status === 'success' ? 'check' : status === 'error' ? 'times' : 'info'}"></i> ${text}`;
+        }
+        
+        async function getActiveEvent() {
+            if (currentEventId) return currentEventId;
+            
+            const eventsRes = await fetch(`${API_BASE}/events`);
+            const events = await eventsRes.json();
+            const activeEvent = events.find(e => e.status === 'active');
+            
+            if (activeEvent) {
+                currentEventId = activeEvent.id;
+                return currentEventId;
+            }
+            return null;
+        }
+        
+        async function recognizeFace(imageData) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            setStatus('scanning', 'Processando...');
+            faceFrame.classList.add('scanning');
+            
+            const eventId = await getActiveEvent();
+            if (!eventId) {
+                showResult('error', 'Erro', 'Nenhum evento ativo');
+                isProcessing = false;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/recognize/events/${eventId}/recognize`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Totem-Key': totemKey
+                    },
+                    body: JSON.stringify({ image_base64: imageData })
+                });
+                
+                const result = await response.json();
+                
+                faceFrame.classList.remove('scanning');
+                
+                if (result.matched && result.result === 'identified') {
+                    faceFrame.classList.add('success');
+                    showResult('success', '✓ Bem-vindo!', `Ticket: ${result.ticket_id}`);
+                } else if (result.result === 'already_checked_in') {
+                    faceFrame.classList.add('warning');
+                    showResult('warning', '⚠️ Já check-in', `Entrada anterior: ${result.first_checkin_at || 'anteriormente'}`);
+                } else {
+                    faceFrame.classList.add('error');
+                    showResult('error', '✖ Não reconhecido', 'Rosto não encontrado');
+                }
+                
+            } catch (error) {
+                faceFrame.classList.add('error');
+                showResult('error', 'Erro', 'Falha na conexão');
+            }
+            
+            isProcessing = false;
+        }
+        
+        function resetScanner() {
+            document.getElementById('result-overlay').classList.remove('show');
+            faceFrame.className = 'face-frame';
+            instruction.textContent = 'Aguarde, detectando rosto...';
+            setStatus('scanning', 'Iniciando...');
+            startCamera();
+        }
+        
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                
+                video.srcObject = stream;
+                canvas = document.createElement('canvas');
+                
+                setStatus('scanning', 'Detectando rosto...');
+                instruction.textContent = 'Posicione seu rosto no quadro';
+                
+                // Start detection loop
+                detectLoop();
+                
+            } catch (err) {
+                setStatus('error', 'Camera não disponível');
+                instruction.textContent = 'Erro ao acessar câmera';
+            }
+        }
+        
+        let lastCapture = 0;
+        
+        function detectLoop() {
+            if (!stream || isProcessing) {
+                requestAnimationFrame(detectLoop);
+                return;
+            }
+            
+            const now = Date.now();
+            
+            // Capture every 2 seconds if not processing
+            if (now - lastCapture > 2000) {
+                lastCapture = now;
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                
+                const imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                
+                // Simple face detection - send for recognition
+                // In production, use a client-side face detection library
+                recognizeFace(imageData);
+            }
+            
+            requestAnimationFrame(detectLoop);
+        }
+        
+        // Initialize
+        startCamera();
+        
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

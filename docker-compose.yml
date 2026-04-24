@@ -14,6 +14,19 @@ services:
     volumes:
       - proxy_db_data_new:/var/lib/postgresql/data
 
+  db_secure:
+    image: postgres:15-alpine
+    container_name: secure_events_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: basileia_secure
+    ports:
+      - "5434:5432"
+    volumes:
+      - secure_db_data:/var/lib/postgresql/data
+
   redis:
     image: redis:7-alpine
     container_name: proxy_redis_new
@@ -28,12 +41,15 @@ services:
     container_name: proxy_app_new
     depends_on:
       - db
+      - db_secure
       - redis
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/proxy_db
+      SECURE_DATABASE_URL: postgresql://postgres:password@db_secure:5432/basileia_secure
       REDIS_URL: redis://redis:6379/0
+      SECURE_REDIS_URL: redis://redis:6379/1
       UAZAPI_TOKEN: your_uazapi_token_here
       BASILEIA_API_KEY: your_basileia_key_here
     volumes:
@@ -42,3 +58,4 @@ services:
 volumes:
   proxy_db_data_new:
   proxy_redis_data_new:
+  secure_db_data:

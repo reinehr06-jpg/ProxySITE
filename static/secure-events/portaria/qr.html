@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Scanner QR - Portaria</title>
+    <link rel="stylesheet" href="../css/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body { background: #000; overflow: hidden; }
+        .scanner-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        #reader { width: 100%; height: 100%; }
+        .scanner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        .scanner-header { background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .scanner-header h2 { color: white; font-size: 1.2rem; }
+        .back-btn { background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 20px; text-decoration: none; }
+        .scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 280px; border: 3px solid var(--primary); border-radius: 20px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
+        .scanner-frame::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--primary); animation: scan 2s infinite; }
+        @keyframes scan { 0%, 100% { top: 0; } 50% { top: calc(100% - 3px); } }
+        .scanner-footer { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%); padding: 30px; text-align: center; }
+        .scanner-footer p { color: rgba(255,255,255,0.7); }
+        
+        .result-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 100; }
+        .result-overlay.show { display: flex; }
+        .result-icon { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 4rem; margin-bottom: 20px; animation: popIn 0.5s ease; }
+        .result-success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 3px solid var(--success); }
+        .result-error { background: rgba(239, 68, 68, 0.2); color: var(--error); border: 3px solid var(--error); }
+        .result-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 3px solid var(--warning); }
+        .result-title { font-size: 2rem; font-weight: 700; margin-bottom: 10px; color: white; }
+        .result-message { color: var(--text-muted); margin-bottom: 30px; }
+        .result-btn { padding: 15px 40px; font-size: 1.1rem; border-radius: 30px; }
+        
+        @keyframes popIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .vibration { animation: vibrate 0.5s; }
+        @keyframes vibrate { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-10px); } 80% { transform: translateX(10px); } }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <div id="reader"></div>
+    </div>
+    
+    <div class="scanner-overlay">
+        <div class="scanner-header">
+            <h2><i class="fas fa-qrcode"></i> Scanner QR</h2>
+            <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> Voltar</a>
+        </div>
+        <div class="scanner-frame"></div>
+        <div class="scanner-footer">
+            <p>Aponte a câmera para o QR Code</p>
+        </div>
+    </div>
+    
+    <div class="result-overlay" id="result-overlay">
+        <div class="result-icon" id="result-icon">
+            <i class="fas fa-check" id="result-icon-icon"></i>
+        </div>
+        <div class="result-title" id="result-title">Acesso Liberado</div>
+        <div class="result-message" id="result-message">Ticket #123456</div>
+        <button class="btn btn-primary result-btn" onclick="resetScanner()">Escanear Novamente</button>
+    </div>
+    
+    <audio id="sound-success" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQYAKpDU9a13AwQ3i9Xvv4QBAjCP1/W4ggECMIzW9bSCAgMxj9j1tYMCAzGQ2fa1hAQEMZHY9rSDBAQxktr2tIQEBTGQ2va0gQQFMZDZ9rSCBAUwkNn2tIIEBTCQ2fa0ggQF" preload="auto"></audio>
+    <audio id="sound-error" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQYAKpDU9a13AwQ3i9Xvv4QBAjCP1/W4ggECMIzW9bSCAgMxj9j1tYMCAzGQ2fa1hAQEMZHY9rSDBAQxktr2tIQEBTGQ2va0gQQFMZDZ9rSCBAUwkNn2tIIEBTCQ2fa0ggQF" preload="auto"></audio>
+    
+    <script src="../js/api.js"></script>
+    <script>
+        const API_BASE = '/secure-events/api';
+        let html5QrCode;
+        let totemKey = localStorage.getItem('portaria_totem_key');
+        let currentEventId = '';
+        
+        // Audio context for beeps
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playBeep(type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 'success') {
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+            } else {
+                osc.frequency.value = 220;
+                osc.type = 'square';
+            }
+            
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+        
+        function vibrate(type) {
+            if (navigator.vibrate) {
+                if (type === 'success') {
+                    navigator.vibrate([100, 50, 100]);
+                } else {
+                    navigator.vibrate([200, 100, 200]);
+                }
+            }
+        }
+        
+        function showResult(type, title, message) {
+            const overlay = document.getElementById('result-overlay');
+            const icon = document.getElementById('result-icon');
+            const iconIcon = document.getElementById('result-icon-icon');
+            const titleEl = document.getElementById('result-title');
+            const messageEl = document.getElementById('result-message');
+            
+            icon.className = 'result-icon result-' + type;
+            iconIcon.className = type === 'success' ? 'fas fa-check' : type === 'warning' ? 'fas fa-exclamation' : 'fas fa-times';
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            overlay.classList.add('show');
+            playBeep(type);
+            vibrate(type);
+        }
+        
+        function resetScanner() {
+            document.getElementById('result-overlay').classList.remove('show');
+            document.body.classList.remove('vibration');
+            startScanner();
+        }
+        
+        async function validateQR(qrData) {
+            if (!currentEventId) {
+                // Get active event
+                const eventsRes = await fetch(`${API_BASE}/events`);
+                const events = await eventsRes.json();
+                const activeEvent = events.find(e => e.status === 'active');
+                if (!activeEvent) {
+                    showResult('error', 'Erro', 'Nenhum evento ativo');
+                    return;
+                }
+                currentEventId = activeEvent.id;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/checkin/validate?event_id=${currentEventId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Totem-Key': totemKey
+                    },
+                    body: JSON.stringify({ qr_token: qrData })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    showResult('success', '✓ Acesso Liberado', `Ticket: ${result.ticket_id}`);
+                } else if (result.result === 'already_used') {
+                    showResult('warning', '⚠️ Já utilizado', `Primeiro uso: ${result.first_use_at || 'anteriormente'}`);
+                } else {
+                    showResult('error', '✖ Acesso Negado', result.message || 'QR inválido');
+                }
+            } catch (error) {
+                showResult('error', 'Erro', 'Falha na conexão');
+            }
+        }
+        
+        function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    html5QrCode.stop();
+                    validateQR(decodedText);
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                showResult('error', 'Erro', 'Camera não disponível');
+            });
+        }
+        
+        // Start on load
+        startScanner();
+        
+        // Cleanup on leave
+        window.addEventListener('beforeunload', () => {
+            if (html5QrCode) {
+                html5QrCode.stop();
+            }
+        });
+    </script>
+</body>
+</html>

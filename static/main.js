@@ -691,6 +691,35 @@ window.testUazapi = async function() {
     setTimeout(() => showToast('Conexão estabelecida!', 'success'), 1500);
 };
 
+window.goToSecureEvents = async function() {
+    showToast('Gerando token de acesso...', 'info');
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            showToast(' Faça login primeiro!', 'error');
+            return;
+        }
+        
+        const response = await fetch('/api/auth/cross-system-token', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Falha ao gerar token');
+        }
+        
+        const data = await response.json();
+        
+        // Open in new tab
+        window.open(data.url, '_blank');
+        showToast('Secure Events aberto em nova aba!', 'success');
+    } catch (e) {
+        showToast('Erro: ' + e.message, 'error');
+    }
+};
+
 // Init
 refreshData();
 setInterval(refreshData, 30000);

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Events - Login</title>
+    <link rel="stylesheet" href="css/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1><i class="fas fa-shield-halved"></i> Secure Events</h1>
+                <p>Biometria Facial + QR Check-in</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" name="email" required placeholder="seu@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="login-btn">
+                    <span id="login-text">Entrar</span>
+                    <span id="login-loading" class="hidden">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </form>
+            
+            <div id="error-message" class="hidden" style="color: var(--error); margin-top: 15px; text-align: center;"></div>
+        </div>
+    </div>
+    
+    <script src="js/api.js"></script>
+    <script>
+        // Check if already logged in
+        if (auth.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+        
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('login-btn');
+            const btnText = document.getElementById('login-text');
+            const btnLoading = document.getElementById('login-loading');
+            const errorDiv = document.getElementById('error-message');
+            
+            btn.disabled = true;
+            btnText.textContent = 'Entrando...';
+            btnLoading.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+            
+            try {
+                await auth.login(email, password);
+                window.location.href = 'dashboard.html';
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = 'Entrar';
+                btnLoading.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
