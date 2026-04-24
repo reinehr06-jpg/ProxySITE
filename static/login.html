@@ -126,10 +126,20 @@ let sessionToken = '';
 let captchaId = '';
 
 async function loadCaptcha() {
-    const res = await fetch(`${API}/captcha`);
-    const data = await res.json();
-    captchaId = data.captcha_id;
-    document.getElementById('captcha-question').textContent = data.question;
+    const qEl = document.getElementById('captcha-question');
+    qEl.textContent = '...';
+    try {
+        const res = await fetch(`${API}/security-check`);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const data = await res.json();
+        captchaId = data.captcha_id;
+        qEl.textContent = data.question;
+        qEl.style.color = '#a78bfa';
+    } catch (e) {
+        console.error(e);
+        qEl.textContent = 'OFFLINE';
+        qEl.style.color = '#ef4444';
+    }
 }
 
 async function doLogin() {

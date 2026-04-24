@@ -33,9 +33,9 @@ CAPTCHA_STORE = {}  # {captcha_id: answer}
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.get("/captcha")
-async def get_captcha():
-    """Generate simple math captcha"""
+@router.get("/security-check")
+async def get_security_check():
+    """Generate simple math problem"""
     import random
     
     # Generate random math problem
