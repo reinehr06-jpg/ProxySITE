@@ -102,7 +102,7 @@ async def login(
     email = form_data.username
     password = form_data.password
     
-    user = db.query(EventsUser).filter_by(email=email).first()
+    user = db.query(EventsUser).filter(EventsUser.email.ilike(email)).first()
     
     if not user or not verify_password(password, user.password_hash):
         log_security_event(

@@ -265,15 +265,34 @@ async def seed_data(
         db.query(User).delete()
         db.commit()
         # 2. Add New Data
-        # Add Admin User
+        # Add Proxy Admin
         from app.core.auth import get_password_hash
-        admin_user = User(
+        proxy_admin = User(
             id=str(uuid.uuid4()),
             username="Proxy.adm@Basileia.global",
             hashed_password=get_password_hash("1kPiJXL$0m#jAzbUaSN9ttWSFUAf7hbnJ2w1&Us6"),
             is_active=True
         )
-        db.add(admin_user)
+        db.add(proxy_admin)
+        
+        # Add Vault Admin (no banco secure)
+        from app.api.events.routes_auth import EventsUser
+        vault_admin = EventsUser(
+            id=str(uuid.uuid4()),
+            email="Vault.basileia@basileia.global",
+            hashed_password=get_password_hash("OUxB57gRIe&ZbJytFEeew@o5nB0NQ!R813hpQ!8L"),
+            full_name="Vault Admin",
+            is_active=True,
+            role="admin"
+        )
+        # Nota: o seed aqui usa db (SessionProxy). Precisamos de SessionSecure.
+        from app.core.database import SessionSecure
+        db_s = SessionSecure()
+        try:
+            db_s.add(vault_admin)
+            db_s.commit()
+        finally:
+            db_s.close()
         states = [
             ("SC", "Joinville", "Samsung Galaxy S23", -26.30, -48.84),
             ("SP", "São Paulo", "iPhone 15 Pro", -23.55, -46.63),
