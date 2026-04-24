@@ -269,8 +269,8 @@ async def seed_data(
         from app.core.auth import get_password_hash
         admin_user = User(
             id=str(uuid.uuid4()),
-            username="Vault.basileia@basileia.global",
-            hashed_password=get_password_hash("admin"),
+            username="Proxy.adm@Basileia.global",
+            hashed_password=get_password_hash("1kPiJXL$0m#jAzbUaSN9ttWSFUAf7hbnJ2w1&Us6"),
             is_active=True
         )
         db.add(admin_user)

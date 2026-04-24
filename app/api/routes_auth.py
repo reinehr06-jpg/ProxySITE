@@ -76,7 +76,7 @@ async def login(
             raise HTTPException(status_code=400, detail="Captcha incorreto")
         del CAPTCHA_STORE[captcha_id]
     
-    user = db.query(User).filter(User.username == form_data.username).first()
+    user = db.query(User).filter(User.username.ilike(form_data.username)).first()
     
     if not user or not verify_password(form_data.password, user.hashed_password):
         log_security_event(
