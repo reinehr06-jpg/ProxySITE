@@ -42,7 +42,7 @@ services:
       - db_secure
       - redis
     ports:
-      - "8001:8000"
+      - "8000:8000"
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/proxy_db
       SECURE_DATABASE_URL: postgresql://postgres:password@db_secure:5432/basileia_secure
