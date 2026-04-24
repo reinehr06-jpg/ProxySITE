@@ -1,16 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes_clients, routes_dispatch, routes_integrations, routes_auth
 from app.core.database import engine_proxy, engine_secure, Base, init_models
 from app.core.security import add_security_middleware, limiter
 from app.core.config import settings
-from app.core.events_security import validate_cross_system_token
-import threading
-from app.jobs.monitor_proxies import run_monitoring_loop
+from app.core.auth import validate_page_token, get_username_from_session
 import logging
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,18 +20,16 @@ init_models()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Secure Proxy Microservice for Basileia Church",
+    description="Basileia Proxy + Vault",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# CORS Middleware - permitir BasileaEvents
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*"  # em dev permite todos, em prod mudar para domínios específicos
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,37 +37,102 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def secure_events_auth_middleware(request: Request, call_next):
-    """Valida token cross-system para todas rotas do Secure Events"""
+async def page_token_auth_middleware(request: Request, call_next):
+    """Valida token por página para todas rotas protegidas"""
     path = request.url.path
     
-    # Rotas públicas que não precisam de token (APENAS login)
+    # Rotas públicas (sem token)
     public_routes = [
-"/vault/api/auth/login",
-        "/vault/api/auth/register", 
-        "/vault/api/auth/refresh",
-        "/vault/api/checkin/validate",
-        "/vault/api/webhooks/",
+        "/",
+        "/login.html",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/api/health",
+        "/api/auth/login",
+        "/api/auth/captcha",
+        "/api/auth/register",
+    ]
+    public_routes_vault = [
+        "/vault/",
+        "/vault/index.html",
+        "/vault/login.html",
+        "/vault/api/auth/login",
+        "/vault/api/auth/captcha", 
+        "/vault/api/auth/register",
+    ]
+    
+    # Verifica se é rota pública
+    is_public = False
+    for route in public_routes:
+        if path == route or path.startswith(route + "/"):
+            is_public = True
+            break
+    
+    for route in public_routes_vault:
+        if path == route or path.startswith(route + "/"):
+            is_public = True
+            break
+    
+    if is_public:
+        return await call_next(request)
+    
+    # Para páginas html (não API), precisa token
+    if path.endswith(".html"):
+        page_token = request.query_params.get("token")
+        session_token = request.query_params.get("session")
+        
+        # Validar token de página
+        if page_token and session_token:
+            # Extrai nome da página do path
+            page = path.rstrip(".html").lstrip("/")
+            if validate_page_token(session_token, page, page_token):
+                return await call_next(request)
+        
+        # Sem token - acesso negado
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Token requerido. Faça login primeiro."}
+        )
+    
+    # Para API, usa header Authorization
+    return await call_next(request)
 
-        if path.startswith("/vault/") and path.endswith(".html"):
 
-        if path == "/vault/index.html":
+# Routers do Proxy
+app.include_router(routes_auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(routes_clients.router, prefix="/api", tags=["Clients"])
+app.include_router(routes_dispatch.router, prefix="/api", tags=["Dispatch"])
+app.include_router(routes_integrations.router, prefix="/api", tags=["Integrations"])
 
-        if path.startswith("/vault/api/"):
+# Vault routers
+from app.api.events import (
+    events_auth_router, events_events_router, events_faces_router,
+    events_checkin_router, events_recognize_router, events_totems_router,
+    events_logs_router, events_webhooks_router, events_pairing_router
+)
 
-app.include_router(events_auth_router, prefix="/vault/api", tags=["Basileia Vault - Auth"])
-app.include_router(events_events_router, prefix="/vault/api", tags=["Basileia Vault - Events"])
-app.include_router(events_faces_router, prefix="/vault/api", tags=["Basileia Vault - Faces"])
-app.include_router(events_checkin_router, prefix="/vault/api", tags=["Basileia Vault - Check-in"])
-app.include_router(events_recognize_router, prefix="/vault/api", tags=["Basileia Vault - Recognize"])
-app.include_router(events_totems_router, prefix="/vault/api", tags=["Basileia Vault - Totems"])
-app.include_router(events_logs_router, prefix="/vault/api", tags=["Basileia Vault - Logs"])
-app.include_router(events_webhooks_router, prefix="/vault/api", tags=["Basileia Vault - Webhooks"])
-app.include_router(events_pairing_router, prefix="/vault/api", tags=["Basileia Vault - Pairing"])
+app.include_router(events_auth_router, prefix="/vault/api/auth", tags=["Vault - Auth"])
+app.include_router(events_events_router, prefix="/vault/api", tags=["Vault - Events"])
+app.include_router(events_faces_router, prefix="/vault/api", tags=["Vault - Faces"])
+app.include_router(events_checkin_router, prefix="/vault/api", tags=["Vault - Check-in"])
+app.include_router(events_recognize_router, prefix="/vault/api", tags=["Vault - Recognize"])
+app.include_router(events_totems_router, prefix="/vault/api", tags=["Vault - Totems"])
+app.include_router(events_logs_router, prefix="/vault/api", tags=["Vault - Logs"])
+app.include_router(events_webhooks_router, prefix="/vault/api", tags=["Vault - Webhooks"])
+app.include_router(events_pairing_router, prefix="/vault/api", tags=["Vault - Pairing"])
 
-app.mount("/vault", StaticFiles(directory="static/vault", html=True), name="vault")
+# Static files
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
-            "vault": "/vault"
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Basileia API",
+        "docs": "/docs",
+        "login": "/login.html",
+        "vault": "/vault/",
     }
 
 
@@ -82,57 +142,17 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
     }
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {str(exc)}")
-    
-    if settings.ENVIRONMENT == "production":
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error", "error_code": "INTERNAL_ERROR"}
-        )
-    else:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(exc), "error_code": "INTERNAL_ERROR"}
-        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
 
-def start_scheduler():
-    from app.jobs.face_retention import auto_delete_expired_faces
-    
-    if settings.FACE_AUTO_DELETE:
-        scheduler.add_job(
-            auto_delete_expired_faces,
-            "cron",
-            hour=0,
-            minute=0,
-            id="face_retention"
-        )
-        logger.info("Face retention job scheduled (daily at midnight)")
-    
-    scheduler.start()
-
-
-@app.on_event("startup")
-def startup_event():
-    logger.info("Starting Proxy Microservice...")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    
-    # Proxy monitoring thread
-    thread = threading.Thread(target=run_monitoring_loop, daemon=True)
-    thread.start()
-    logger.info("Background monitoring started")
-    
-    # Start scheduler for Secure Events jobs
-    start_scheduler()
-
-
-@app.on_event("shutdown")
-def shutdown_event():
-    logger.info("Shutting down Proxy Microservice...")
-    scheduler.shutdown()
+# Health check and startup
+logger.info("Starting Basileia Microservice...")

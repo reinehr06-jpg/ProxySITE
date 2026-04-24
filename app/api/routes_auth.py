@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -7,7 +7,8 @@ from app.core.config import settings
 from app.core.auth import (
     verify_password, get_password_hash, 
     create_access_token, create_refresh_token,
-    get_current_user, log_security_event
+    get_current_user, log_security_event,
+    create_session_token, get_username_from_session
 )
 from app.core.schemas import (
     UserCreate, UserLogin, TokenResponse, 
@@ -18,6 +19,12 @@ from app.models.all_models import User
 import logging
 import random
 import string
+import secrets
+import json
+import pyotp
+import qrcode
+import io
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -96,21 +103,49 @@ async def login(
             detail="User account is disabled"
         )
     
-    # Check if requires 2FA
+# Check if requires 2FA
     if getattr(user, 'otp_enabled', False) and getattr(user, 'otp_secret', None):
         # Generate temp token for 2FA step
-        import json
         temp_token = create_access_token(data={
             "sub": user.username,
             "type": "2fa_pending",
             "temp": True
         })
         
-        return TokenResponse(
-            access_token=temp_token,
-            refresh_token="",
-            expires_in=300  # 5 min only
-        )
+        return {
+            "require_verify_2fa": True,
+            "temp_token": temp_token,
+            "expires_in": 300
+        }
+    
+    # 2FA not configured - need setup first
+    if not getattr(user, 'otp_enabled', False):
+        temp_token = create_access_token(data={
+            "sub": user.username,
+            "type": "2fa_pending",
+            "temp": True
+        })
+        
+        return {
+            "require_2fa_setup": True,
+            "temp_token": temp_token,
+            "expires_in": 300
+        }
+    
+    # No 2FA - normal login
+    session_token = create_session_token(user.username)
+    
+    log_security_event(
+        "LOGIN_SUCCESS",
+        user.username,
+        "User logged in successfully",
+        get_client_ip(request)
+    )
+    
+    return {
+        "session_token": session_token,
+        "expires_in": 10800
+    }
     
     access_token = create_access_token(data={"sub": user.username})
     refresh_token = create_refresh_token(data={"sub": user.username})
@@ -338,7 +373,7 @@ async def remove_2fa_device(
 
 @router.get("/cross-system-token")
 async def generate_cross_system_token(current_user: User = Depends(get_current_user)):
-    """Gera token para acessar Secure Events"""
+    """Gera token para acessar Vault"""
     from app.core.auth import create_cross_system_token
     
     token = create_cross_system_token(current_user.username)
@@ -346,8 +381,195 @@ async def generate_cross_system_token(current_user: User = Depends(get_current_u
     return {
         "token": token,
         "url": f"/vault/?token={token}",
-        "expires_in": 300  # 5 minutes
+        "expires_in": 300
     }
+
+
+@router.get("/setup-2fa")
+async def setup_2fa(
+    current_user: User = Depends(get_current_user)
+):
+    """Gera QR code para setup 2FA - passo a passo"""
+    import pyotp
+    import qrcode
+    import io
+    import base64
+    
+    # Se já tem secret, retorna o mesmo
+    secret = getattr(current_user, 'otp_secret', None)
+    if not secret:
+        secret = pyotp.random_base32()
+    
+    totp = pyotp.TOTP(secret)
+    uri = totp.provisioning_uri(
+        name=current_user.username,
+        issuer_name='BasileiaProxy'
+    )
+    
+    # QR code
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    return {
+        "secret": secret,
+        "qr_code": f"data:image/png;base64,{qr_base64}",
+        "instructions": [
+            "1. Baixe o app Google Authenticator ou Authy no seu celular",
+            "2. Abra o app e selecione 'Escanear código QR'",
+            "3. Escaneie o QR code acima",
+            "4. O app vai mostrar um código de 6 dígitos",
+            "5. Digite o código abaixo para confirmar"
+        ]
+    }
+
+
+@router.post("/verify-2fa-setup")
+async def verify_2fa_setup(
+    request: Request,
+    otp_code: str,
+    device_name: str = "Meu Device",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Confirma setup 2FA e habilita"""
+    import pyotp
+    import json
+    
+    secret = current_user.otp_secret
+    if not secret:
+        raise HTTPException(status_code=400, detail="Rode setup-2fa primeiro")
+    
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(otp_code, valid_window=1):
+        raise HTTPException(status_code=401, detail="Código inválido")
+    
+    # Salva secret e habilita
+    current_user.otp_secret = secret
+    current_user.otp_enabled = True
+    
+    # Adiciona device
+    devices = json.loads(getattr(current_user, 'otp_devices', '[]'))
+    devices.append({
+        "id": secrets.token_hex(16),
+        "name": device_name,
+        "created_at": datetime.utcnow().isoformat()
+    })
+    current_user.otp_devices = json.dumps(devices)
+    
+    # Gera token de sessão
+    from app.core.auth import create_session_token
+    session_token = create_session_token(current_user.username)
+    
+    db.commit()
+    
+    return {
+        "message": "2FA habilitado com sucesso",
+        "session_token": session_token,
+        "expires_in": 10800
+    }
+
+
+@router.post("/verify-2fa")
+async def verify_2fa(
+    request: Request,
+    otp_code: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Verifica código 2FA e gera token de sessão"""
+    import pyotp
+    
+    secret = current_user.otp_secret
+    if not secret:
+        raise HTTPException(status_code=400, detail="2FA não configurado")
+    
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(otp_code, valid_window=1):
+        raise HTTPException(status_code=401, detail="Código inválido")
+    
+    # Gera token de sessão
+    from app.core.auth import create_session_token
+    session_token = create_session_token(current_user.username)
+    
+    log_security_event(
+        "LOGIN_2FA_SUCCESS",
+        current_user.username,
+        "Login 2FA OK",
+        get_client_ip(request)
+    )
+    
+    return {
+        "session_token": session_token,
+        "expires_in": 10800
+    }
+
+
+@router.post("/page-token/{page}")
+async def get_page_token(
+    page: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Gera token único por página"""
+    from app.core.auth import create_page_token, get_username_from_session
+    from fastapi import Header
+    
+    session_token = request.headers.get("X-Session-Token")
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Session token requerido")
+    
+    username = get_username_from_session(session_token)
+    if username != current_user.username:
+        raise HTTPException(status_code=401, detail="Session inválida")
+    
+    page_token = create_page_token(session_token, page)
+    if not page_token:
+        raise HTTPException(status_code=401, detail="Session expirada")
+    
+    return {
+        "page": page,
+        "page_token": page_token,
+        "url": f"/{page}?token={page_token}",
+        "expires_in": 10800
+    }
+
+
+@router.get("/2fa-devices")
+async def list_2fa_devices(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Lista dispositivos 2FA"""
+    import json
+    devices = json.loads(getattr(current_user, 'otp_devices', '[]'))
+    return {"devices": devices}
+
+
+@router.delete("/2fa-devices/{device_id}")
+async def remove_2fa_device(
+    device_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Remove dispositivo 2FA"""
+    import json
+    devices = json.loads(getattr(current_user, 'otp_devices', '[]'))
+    devices = [d for d in devices if d['id'] != device_id]
+    current_user.otp_devices = json.dumps(devices)
+    
+    if not devices:
+        current_user.otp_enabled = False
+        current_user.otp_secret = None
+    
+    db.commit()
+    return {"message": "Device removido"}
 
 
 @router.get("/health", response_model=HealthCheckResponse)

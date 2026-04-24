@@ -3,43 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Basileia Proxy</title>
+    <title>Login | Basileia Vault</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0c0c16 0%, #1a1a2e 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
         .container { width: 100%; max-width: 420px; padding: 20px; }
-        .login-card { background: #161625; padding: 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .login-card { background: #1e293b; padding: 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
         .logo { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; color: #fff; }
-        .logo i { color: #8b5cf6; margin-right: 8px; }
+        .logo i { color: #06b6d4; margin-right: 8px; }
         .subtitle { color: #94a3b8; margin-bottom: 30px; font-size: 0.9rem; }
         .input-group { margin-bottom: 18px; text-align: left; }
         .input-group label { display: block; margin-bottom: 8px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
-        .input-group input { width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #0c0c16; color: #fff; font-size: 0.95rem; transition: all 0.2s; }
-        .input-group input:focus { outline: none; border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,0.2); }
-        .captcha-box { background: #1e1e32; padding: 15px; border-radius: 10px; margin-bottom: 18px; display: flex; align-items: center; gap: 15px; }
+        .input-group input { width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; font-size: 0.95rem; transition: all 0.2s; }
+        .input-group input:focus { outline: none; border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.2); }
+        .captcha-box { background: #334155; padding: 15px; border-radius: 10px; margin-bottom: 18px; display: flex; align-items: center; gap: 15px; }
         .captcha-box input { flex: 1; }
-        .btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(139,92,246,0.4); }
+        .btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #06b6d4, #0891b2); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(6,182,212,0.4); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .error { background: rgba(239,68,68,0.1); color: #ef4444; padding: 12px; border-radius: 8px; margin-bottom: 18px; font-size: 0.85rem; border: 1px solid rgba(239,68,68,0.3); display: none; }
         .hidden { display: none; }
         .step-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
         .qr-container { background: #fff; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center; }
         .qr-container img { max-width: 200px; }
-        .instructions { text-align: left; margin: 20px 0; padding: 15px; background: #1e1e32; border-radius: 10px; }
+        .instructions { text-align: left; margin: 20px 0; padding: 15px; background: #334155; border-radius: 10px; }
         .instructions ol { padding-left: 20px; }
         .instructions li { margin-bottom: 10px; color: #94a3b8; font-size: 0.9rem; }
-        .token-box { background: #1e1e32; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center; }
-        .token-box code { color: #10b981; font-size: 0.85rem; word-break: break-all; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="login-card">
-        <div class="logo"><i class="fas fa-shield-halved"></i> Basileia Proxy</div>
-        <div class="subtitle">Sistema de Gestão</div>
+        <div class="logo"><i class="fas fa-vault"></i> Basileia Vault</div>
+        <div class="subtitle">Biometria + Check-in</div>
         
         <div id="error" class="error"></div>
         
@@ -62,29 +60,28 @@
             </form>
         </div>
         
-        <!-- Step 2: 2FA Setup (se não configurado) -->
+        <!-- Step 2: Setup 2FA -->
         <div id="step-setup-2fa" class="hidden">
-            <div class="step-title"><i class="fas fa-shield-alt"></i> Configurar 2 Fatores</div>
-            <p style="color: #94a3b8; margin-bottom: 15px;">Configure o autenticador para continuar:</p>
+            <div class="step-title"><i class="fas fa-shield-alt"></i> Configurar Autenticador</div>
             
-            <div id="qr-container" class="qr-container">
+            <div class="qr-container">
                 <img id="qr-code" src="" alt="QR Code">
             </div>
             
             <div class="instructions">
                 <ol>
-                    <li>Baixe o <strong>Google Authenticator</strong> ou <strong>Authy</strong></li>
-                    <li>Escaneie o QR code acima</li>
-                    <li>Digite o código de 6 dígitos abaixo</li>
+                    <li>Use <strong>Google Authenticator</strong> ou <strong>Authy</strong></li>
+                    <li>Escaneie o QR code</li>
+                    <li>Digite o código abaixo</li>
                 </ol>
             </div>
             
             <div class="input-group">
-                <label>Código do App</label>
+                <label>Código</label>
                 <input type="text" id="setup-otp" placeholder="000 000" maxlength="7">
             </div>
             <div class="input-group">
-                <label>Nome do Dispositivo</label>
+                <label>Dispositivo</label>
                 <input type="text" id="device-name" placeholder="Meu Celular">
             </div>
             <button onclick="confirmSetup2FA()" class="btn">Confirmar</button>
@@ -93,10 +90,9 @@
         <!-- Step 3: Verify 2FA -->
         <div id="step-verify-2fa" class="hidden">
             <div class="step-title"><i class="fas fa-lock"></i> Código de Verificação</div>
-            <p style="color: #94a3b8; margin-bottom: 20px;">Digite o código do seu app:</p>
             
             <div class="input-group">
-                <label>Código</label>
+                <label>Código do App</label>
                 <input type="text" id="verify-otp" placeholder="000 000" maxlength="7" style="text-align: center; font-size: 1.5rem; letter-spacing: 8px;">
             </div>
             <button onclick="confirmVerify2FA()" class="btn">Verificar</button>
@@ -106,15 +102,14 @@
         <div id="step-success" class="hidden">
             <div style="text-align: center;">
                 <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 20px;"></i>
-                <div class="step-title">Login Realizado!</div>
-                <p style="color: #94a3b8; margin-bottom: 20px;">Redirecting...</p>
+                <div class="step-title">Acesso Liberado!</div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-const API = '/api/auth';
+const API = '/vault/api/auth';
 let tempToken = '';
 let sessionToken = '';
 let captchaId = '';
@@ -248,24 +243,17 @@ async function confirmVerify2FA() {
 }
 
 async function goToDashboard() {
-    // Get page token for dashboard
     const res = await fetch(`${API}/page-token/dashboard`, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${sessionToken}`,
-            'X-Session-Token': sessionToken
-        }
+        headers: {'Authorization': `Bearer ${sessionToken}`}
     });
     const data = await res.json();
     
-    // Redirect
     window.location.href = data.url;
 }
 
 function showStep(id) {
-    document.querySelectorAll('[id^="step-"]').forEach(el => {
-        el.classList.add('hidden');
-    });
+    document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
 }
 

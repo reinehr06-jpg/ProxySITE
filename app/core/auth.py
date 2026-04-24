@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status, Request
@@ -10,12 +10,18 @@ from app.core.config import settings
 from app.models.all_models import User
 import logging
 import time
+import secrets
+import string
 
 logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 security = HTTPBearer()
+
+# Token store (in production use Redis)
+# Format: {session_token: {"username": "x", "expires": datetime, "pages": {page_id: page_token}}}
+SESSION_TOKENS: Dict = {}
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -70,6 +76,62 @@ def validate_cross_system_token(token: str) -> Optional[str]:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def create_session_token(username: str) -> str:
+    """Gera token de sessão válido por 3 horas"""
+    token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(64))
+    SESSION_TOKENS[token] = {
+        "username": username,
+        "expires": datetime.utcnow() + timedelta(hours=3),
+        "pages": {}
+    }
+    return token
+
+
+def create_page_token(session_token: str, page: str) -> Optional[str]:
+    """Gera token único por página (válido por 3 horas)"""
+    session = SESSION_TOKENS.get(session_token)
+    if not session:
+        return None
+    if session["expires"] < datetime.utcnow():
+        del SESSION_TOKENS[session_token]
+        return None
+    
+    # Gera token único para a página
+    page_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(64))
+    session["pages"][page] = {
+        "token": page_token,
+        "expires": datetime.utcnow() + timedelta(hours=3)
+    }
+    return page_token
+
+
+def validate_page_token(session_token: str, page: str, page_token: str) -> bool:
+    """Valida token de página"""
+    session = SESSION_TOKENS.get(session_token)
+    if not session:
+        return False
+    if session["expires"] < datetime.utcnow():
+        return False
+    
+    page_data = session["pages"].get(page)
+    if not page_data:
+        return False
+    if page_data["expires"] < datetime.utcnow():
+        return False
+    
+    return page_data["token"] == page_token
+
+
+def get_username_from_session(session_token: str) -> Optional[str]:
+    """Retorna username do token de sessão"""
+    session = SESSION_TOKENS.get(session_token)
+    if not session:
+        return None
+    if session["expires"] < datetime.utcnow():
+        return None
+    return session["username"]
 
 
 async def get_current_user(
