@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Events - Totens</title>
+    <link rel="stylesheet" href="css/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo"><h2><i class="fas fa-shield-halved"></i> Secure</h2></div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="events.html"><i class="fas fa-calendar-event"></i><span>Eventos</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="faces.html"><i class="fas fa-user-circle"></i><span>Rostos</span></a></li>
+                <li class="nav-item"><a class="nav-link active" href="totems.html"><i class="fas fa-desktop"></i><span>Totens</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="logs.html"><i class="fas fa-list-alt"></i><span>Logs</span></a></li>
+            </ul>
+            <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border);">
+                <a class="nav-link" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i><span>Sair</span></a>
+            </div>
+        </aside>
+        <main class="main-content">
+            <header class="header"><h1>Totens</h1></header>
+            <div class="card">
+                <div class="card-header"><h3>Dispositivos</h3></div>
+                <div class="filter-bar">
+                    <select id="totem-event-filter"><option value="">Selecione um evento</option></select>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Zona</th><th>Modo</th><th>Último heartbeat</th><th>Status</th><th>Ações</th></tr></thead>
+                        <tbody id="totems-table"><tr><td colspan="6" class="text-center">Selecione um evento</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="js/api.js"></script>
+    <script>
+        requireAuth();
+        (async () => {
+            const events = await eventsApi.list();
+            document.getElementById('totem-event-filter').innerHTML = '<option value="">Selecione um evento</option>' + events.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        })();
+        document.getElementById('totem-event-filter').addEventListener('change', async (e) => {
+            if (!e.target.value) return;
+            const totems = await totemsApi.list(e.target.value);
+            document.getElementById('totems-table').innerHTML = totems.length ?
+                totems.map(t => `<tr><td><strong>${t.name}</strong></td><td>${t.zone}</td><td><span class="badge badge-info">${t.mode}</span></td><td>${formatRelativeTime(t.last_seen_at)}</td><td><span class="badge badge-${t.status==='active'?'success':'error'}">${t.status}</span></td><td><button class="btn-icon" onclick="regenerateTotemKey('${t.id}')"><i class="fas fa-key"></i></button></td></tr>`).join('') :
+                '<tr><td colspan="6" class="text-center">Nenhum totem</td></tr>';
+        });
+    </script>
+</body>
+</html>

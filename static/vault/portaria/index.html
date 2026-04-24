@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portaria - Secure Events</title>
+    <link rel="stylesheet" href="../css/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+        .mode-select { display: flex; gap: 20px; margin-top: 30px; }
+        .mode-card { flex: 1; padding: 40px; background: var(--bg-card); border-radius: 16px; text-align: center; cursor: pointer; border: 2px solid var(--border); transition: all 0.3s; }
+        .mode-card:hover { border-color: var(--primary); transform: translateY(-4px); }
+        .mode-card i { font-size: 3rem; margin-bottom: 15px; color: var(--primary); }
+        .mode-card h3 { margin-bottom: 10px; }
+        .mode-card p { color: var(--text-muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-card" style="max-width: 600px;">
+            <div class="login-logo">
+                <h1><i class="fas fa-door-open"></i> Portaria</h1>
+                <p>Secure Events - Selecione o modo de operação</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Chave do Totem</label>
+                    <input type="text" id="totem-key" required placeholder="totem_...">
+                </div>
+                <button type="submit" class="btn btn-primary">Continuar</button>
+            </form>
+            
+            <div id="mode-selection" class="hidden">
+                <p style="text-align: center; margin-bottom: 10px; color: var(--text-muted);">
+                    Escolha o modo de operação:
+                </p>
+                <div class="mode-select">
+                    <div class="mode-card" onclick="selectMode('qr')">
+                        <i class="fas fa-qrcode"></i>
+                        <h3>QR Code</h3>
+                        <p>Escanear código QR de entrada</p>
+                    </div>
+                    <div class="mode-card" onclick="selectMode('facial')">
+                        <i class="fas fa-face-smile"></i>
+                        <h3>Reconhecimento Facial</h3>
+                        <p>Identificação por biometria</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="error-message" class="hidden" style="color: var(--error); margin-top: 15px; text-align: center;"></div>
+        </div>
+    </div>
+    
+    <script src="../js/api.js"></script>
+    <script>
+        let totemKey = '';
+        let selectedEventId = '';
+        
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            totemKey = document.getElementById('totem-key').value;
+            
+            try {
+                const response = await fetch(`/secure-events/api/totems/status/`, {
+                    headers: { 'X-Totem-Key': totemKey }
+                });
+                
+                if (!response.ok) throw new Error('Totem inválido');
+                
+                const data = await response.json();
+                
+                // Store totem info
+                localStorage.setItem('portaria_totem_key', totemKey);
+                localStorage.setItem('portaria_totem_id', data.totem_id || '');
+                
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('mode-selection').classList.remove('hidden');
+                
+            } catch (error) {
+                document.getElementById('error-message').textContent = error.message;
+                document.getElementById('error-message').classList.remove('hidden');
+            }
+        });
+        
+        function selectMode(mode) {
+            if (mode === 'qr') {
+                window.location.href = 'qr.html';
+            } else {
+                window.location.href = 'totem.html';
+            }
+        }
+    </script>
+</body>
+</html>

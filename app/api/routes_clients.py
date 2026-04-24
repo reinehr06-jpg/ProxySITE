@@ -1,21 +1,136 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.core.database import get_db
+from app.core.auth import get_current_user, log_security_event
+from app.core.security import get_client_ip, limiter
+from app.core.schemas import (
+    ClientCreate, ClientUpdate, ClientResponse,
+    ProxyResponse, ReallocateRequest,
+    StatsResponse, ErrorResponse
+)
 from app.models.all_models import Client, Proxy, Log, User, NetworkLog
-from app.core.auth import get_password_hash
 import uuid
 import logging
 
-router = APIRouter()
+router = APIRouter(prefix="", tags=["Clients"])
 logger = logging.getLogger(__name__)
 
-@router.get("/clients")
-async def list_clients(db: Session = Depends(get_db)):
-    return db.query(Client).all()
 
-@router.get("/stats")
-async def get_stats(db: Session = Depends(get_db)):
+@router.get("/clients", response_model=list[ClientResponse])
+@limiter.limit("60/minute")
+async def list_clients(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    clients = db.query(Client).all()
+    return clients
+
+
+@router.get("/clients/{client_id}", response_model=ClientResponse)
+@limiter.limit("60/minute")
+async def get_client(
+    request: Request,
+    client_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
+
+
+@router.post("/clients", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
+async def create_client(
+    request: Request,
+    client_data: ClientCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    existing = db.query(Client).filter(Client.phone == client_data.phone).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Client with this phone already exists")
+    
+    client = Client(
+        id=str(uuid.uuid4()),
+        phone=client_data.phone,
+        church_name=client_data.church_name,
+        cpf_cnpj=client_data.cpf_cnpj,
+        basileia_id=client_data.basileia_id,
+        default_ip=client_data.default_ip,
+        estado=client_data.estado,
+        cidade=client_data.cidade,
+        status="pending",
+        activated=False
+    )
+    
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    
+    log_security_event("CLIENT_CREATED", current_user.username, f"Client: {client.id}", get_client_ip(request))
+    
+    return client
+
+
+@router.put("/clients/{client_id}", response_model=ClientResponse)
+@limiter.limit("30/minute")
+async def update_client(
+    request: Request,
+    client_id: str,
+    client_data: ClientUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if client_data.church_name is not None:
+        client.church_name = client_data.church_name
+    if client_data.basileia_id is not None:
+        client.basileia_id = client_data.basileia_id
+    if client_data.default_ip is not None:
+        client.default_ip = client_data.default_ip
+    if client_data.status is not None:
+        client.status = client_data.status
+    
+    db.commit()
+    db.refresh(client)
+    
+    log_security_event("CLIENT_UPDATED", current_user.username, f"Client: {client.id}", get_client_ip(request))
+    
+    return client
+
+
+@router.delete("/clients/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
+async def delete_client(
+    request: Request,
+    client_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    db.delete(client)
+    db.commit()
+    
+    log_security_event("CLIENT_DELETED", current_user.username, f"Client: {client_id}", get_client_ip(request))
+
+
+@router.get("/stats", response_model=StatsResponse)
+@limiter.limit("60/minute")
+async def get_stats(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     try:
         total_clients = db.query(Client).count()
         active_clients = db.query(Client).filter(Client.status == "active").count()
@@ -23,14 +138,14 @@ async def get_stats(db: Session = Depends(get_db)):
         total_proxies = db.query(Proxy).count()
         active_proxies = db.query(Proxy).filter(Proxy.status == "active").count()
         
-        # New Metrics
         proxies = db.query(Proxy).all()
         avg_resp = db.query(func.avg(Proxy.avg_response_time)).scalar() or 0
-        uazapi_ok = True # Mock connection status
+        uazapi_ok = True
         
         proxies_by_state = db.query(Proxy.estado, func.count(Proxy.id)).filter(Proxy.status == "active").group_by(Proxy.estado).all()
         proxies_by_state_dict = {state: count for state, count in proxies_by_state if state}
         logs = db.query(Log).order_by(Log.created_at.desc()).limit(10).all()
+        
         return {
             "total_clients": total_clients,
             "active_clients_count": active_clients,
@@ -40,44 +155,83 @@ async def get_stats(db: Session = Depends(get_db)):
             "avg_system_response": round(float(avg_resp), 1),
             "uazapi_connected": uazapi_ok,
             "proxies_by_state": proxies_by_state_dict,
-            "recent_logs": logs
+            "recent_logs": [
+                {
+                    "id": l.id,
+                    "client_id": l.client_id,
+                    "old_proxy": l.old_proxy,
+                    "new_proxy": l.new_proxy,
+                    "reason": l.reason,
+                    "created_at": l.created_at
+                } for l in logs
+            ]
         }
     except Exception as e:
         logger.error(f"Stats Error: {e}")
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/proxies/{proxy_id}/clients")
-async def get_proxy_clients(proxy_id: str, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_proxy_clients(
+    request: Request,
+    proxy_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     clients = db.query(Client).filter(Client.proxy_id == proxy_id).all()
-    return clients
+    return [
+        {
+            "id": c.id,
+            "phone": c.phone,
+            "church_name": c.church_name,
+            "status": c.status,
+            "activated": c.activated
+        }
+        for c in clients
+    ]
+
 
 @router.post("/reallocate")
-async def reallocate_client(data: dict, db: Session = Depends(get_db)):
-    client_id = data.get("client_id")
-    new_proxy_id = data.get("new_proxy_id")
+@limiter.limit("20/minute")
+async def reallocate_client(
+    request: Request,
+    data: ReallocateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.id == data.client_id).first()
+    new_proxy = db.query(Proxy).filter(Proxy.id == data.new_proxy_id).first()
     
-    client = db.query(Client).filter(Client.id == client_id).first()
-    new_proxy = db.query(Proxy).filter(Proxy.id == new_proxy_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    if not new_proxy:
+        raise HTTPException(status_code=404, detail="Proxy not found")
     
-    if not client or not new_proxy:
-        raise HTTPException(status_code=404, detail="Client or Proxy not found")
-        
     old_proxy_ip = client.default_ip
     client.proxy_id = new_proxy.id
     client.default_ip = new_proxy.ip
     
-    # Log the reallocation
     db.add(Log(
         client_id=client.id,
-        old_proxy=old_proxy_ip,
+        old_proxy=old_proxy_ip or "None",
         new_proxy=new_proxy.ip,
-        reason="Manual Admin Reallocation"
+        reason=f"Manual Admin Reallocation by {current_user.username}"
     ))
     db.commit()
+    
+    log_security_event("CLIENT_REALLOCATED", current_user.username, f"Client: {client.id} -> Proxy: {new_proxy.id}", get_client_ip(request))
+    
     return {"status": "ok", "message": f"Client moved to {new_proxy.device_model} ({new_proxy.ip})"}
 
+
 @router.get("/addresses")
-async def get_addresses(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_addresses(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     proxies = db.query(Proxy).all()
     result = []
     for p in proxies:
@@ -89,21 +243,27 @@ async def get_addresses(db: Session = Depends(get_db)):
             "clients_count": client_count,
             "status": p.status,
             "avg_response": p.avg_response_time,
-            "requests": p.request_count
+            "requests": p.request_count,
+            "estado": p.estado,
+            "cidade": p.cidade
         })
     return result
 
+
 @router.post("/seed")
-async def seed_data(db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def seed_data(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     try:
-        # 1. Clear tables in correct order
         db.query(Log).delete()
         db.query(NetworkLog).delete()
         db.query(Client).delete()
         db.query(Proxy).delete()
         db.commit()
-
-        # 2. Add New Data
+        
         states = [
             ("SC", "Joinville", "Samsung Galaxy S23", -26.30, -48.84),
             ("SP", "São Paulo", "iPhone 15 Pro", -23.55, -46.63),
@@ -132,8 +292,8 @@ async def seed_data(db: Session = Depends(get_db)):
             )
             db.add(p)
             proxies.append(p)
-        db.flush() # Ensure IDs are available
-
+        db.flush()
+        
         churches = [
             ("Basileia Matriz Joinville", "SC", "active"),
             ("Basileia SP Sul", "SP", "active"),
@@ -144,7 +304,7 @@ async def seed_data(db: Session = Depends(get_db)):
             ("Basileia BA Pelourinho", "BA", "active"),
             ("Basileia SC Itapema", "SC", "active")
         ]
-
+        
         for i, (name, st, status) in enumerate(churches):
             target_proxy = proxies[i % len(proxies)]
             c = Client(
@@ -163,25 +323,9 @@ async def seed_data(db: Session = Depends(get_db)):
             )
             db.add(c)
             
-            # Simulated history logs
             if status == "active":
                 db.add(Log(client_id=c.id, old_proxy="0.0.0.0", new_proxy=target_proxy.ip, reason="Initial provisioning"))
         
-        # Add Alerts for demo
-        from app.models.all_models import Alert
-        alerts_data = [
-            ("client_offline", "Basileia RJ Norte caiu - falha na conexão proxy", "error"),
-            ("client_active", "Basileia SC Itapema conectado com sucesso", "success"),
-            ("proxy_error", "Proxy 192.168.1.102 não responde há 5 minutos", "error"),
-            ("system_warning", "Uso de memória acima de 80%", "warning"),
-            ("integration_ok", "Uazapi API responds successfully", "success"),
-            ("client_disconnected", "Basileia BH Savassi desconectado", "error"),
-            ("backup_complete", "Backup automático concluído", "success"),
-        ]
-        for alert_type, msg, level in alerts_data:
-            db.add(Alert(type=alert_type, message=msg, level=level))
-
-        # Add Network Logs for all proxies
         for p in proxies:
             for j in range(5):
                 db.add(NetworkLog(
@@ -191,8 +335,11 @@ async def seed_data(db: Session = Depends(get_db)):
                     status_code=200,
                     response_time=0.08
                 ))
-
+        
         db.commit()
+        
+        log_security_event("DATA_SEEDED", current_user.username, "Database seeded with demo data", get_client_ip(request))
+        
         return {"status": "ok", "message": "Enterprise simulation seeded successfully."}
     except Exception as e:
         db.rollback()

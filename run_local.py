@@ -5,6 +5,10 @@ import sys
 def run():
     print("🚀 Iniciando Setup Local...")
     
+    # Set environment variables BEFORE any imports
+    os.environ["DATABASE_URL"] = "sqlite:///./proxy_local.db"
+    os.environ["REDIS_URL"] = ""  # Desabilita Redis para usar memória local
+    
     try:
         # 1. Instala dependências
         print("📦 Instalando dependências...")
@@ -14,10 +18,8 @@ def run():
         print("Tentando continuar assim mesmo...")
 
     # 2. Roda o Uvicorn
-    print("✅ Tudo pronto! O servidor será iniciado em http://127.0.0.1:8000/dashboard")
+    print("✅ Tudo pronto! O servidor será iniciado em http://127.0.0.1:8000")
     local_env = os.environ.copy()
-    local_env["DATABASE_URL"] = "sqlite:///./proxy_local.db"
-    local_env["REDIS_URL"] = "" # Desabilita Redis para usar memória local
     
     try:
         subprocess.run(["python3", "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"], env=local_env)

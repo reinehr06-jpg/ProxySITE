@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Events - Logs</title>
+    <link rel="stylesheet" href="css/events.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo"><h2><i class="fas fa-shield-halved"></i> Secure</h2></div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="events.html"><i class="fas fa-calendar-event"></i><span>Eventos</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="faces.html"><i class="fas fa-user-circle"></i><span>Rostos</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="totems.html"><i class="fas fa-desktop"></i><span>Totens</span></a></li>
+                <li class="nav-item"><a class="nav-link active" href="logs.html"><i class="fas fa-list-alt"></i><span>Logs</span></a></li>
+            </ul>
+            <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border);">
+                <a class="nav-link" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i><span>Sair</span></a>
+            </div>
+        </aside>
+        <main class="main-content">
+            <header class="header"><h1>Logs de Auditoria</h1></header>
+            <div class="card">
+                <div class="filter-bar">
+                    <select id="log-action-filter"><option value="">Todas as ações</option><option value="event.created">Evento criado</option><option value="face.registered">Rosto cadastrado</option><option value="checkin.identified">Check-in</option></select>
+                    <button class="btn btn-secondary btn-sm" onclick="loadLogs()"><i class="fas fa-search"></i> Filtrar</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Data/Hora</th><th>Ação</th><th>Evento</th><th>Ticket</th><th>Ator</th><th>IP</th></tr></thead>
+                        <tbody id="logs-table"><tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="js/api.js"></script>
+    <script>
+        requireAuth();
+        async function loadLogs() {
+            const action = document.getElementById('log-action-filter').value;
+            const params = action ? { action } : {};
+            const logs = await logsApi.list(params);
+            document.getElementById('logs-table').innerHTML = logs.length ?
+                logs.map(l => `<tr><td>${formatDate(l.created_at)}</td><td><code>${l.action}</code></td><td>${l.event_id||'-'}</td><td>${l.ticket_id||'-'}</td><td>${l.actor_type||'-'}</td><td>${l.ip_address||'-'}</td></tr>`).join('') :
+                '<tr><td colspan="6" class="text-center">Nenhum log</td></tr>';
+        }
+        loadLogs();
+    </script>
+</body>
+</html>

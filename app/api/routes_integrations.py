@@ -1,15 +1,24 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status, Request, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from app.core.database import get_db
+from app.core.auth import get_current_user, log_security_event
+from app.core.security import get_client_ip, limiter
+from app.core.config import settings
+from app.core.schemas import IntegrationConfig, WebhookPayload
+from app.models.all_models import User, Alert
 import requests
+import hmac
+import hashlib
+import json
+import logging
 
-router = APIRouter()
+logger = logging.getLogger(__name__)
 
-class IntegrationConfig(BaseModel):
-    uazapi_key: str = None
-    basileia_key: str = None
-    basileia_webhook: str = None
+router = APIRouter(prefix="/integrations", tags=["Integrations"])
 
-# In-memory storage (em produção usar banco de dados)
+security = HTTPBearer(auto_error=False)
+
 integration_settings = {
     "uazapi_key": "",
     "basileia_key": "",
@@ -18,17 +27,39 @@ integration_settings = {
     "basileia_webhook_active": False
 }
 
-@router.get("/integrations")
-async def get_integrations():
-    """Retorna configurações de integrações"""
-    return integration_settings
 
-@router.post("/integrations")
-async def save_integrations(config: IntegrationConfig):
-    """Salva configurações de integrações"""
+def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    if not signature:
+        return False
+    
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(f"sha256={expected_signature}", signature)
+
+
+@router.get("", dependencies=[Depends(get_current_user)])
+@limiter.limit("30/minute")
+async def get_integrations(request: Request):
+    return {
+        **integration_settings,
+        "uazapi_key": "***" if integration_settings["uazapi_key"] else "",
+        "basileia_key": "***" if integration_settings["basileia_key"] else ""
+    }
+
+
+@router.post("", dependencies=[Depends(get_current_user)])
+@limiter.limit("20/minute")
+async def save_integrations(
+    request: Request,
+    config: IntegrationConfig,
+    current_user: User = Depends(get_current_user)
+):
     if config.uazapi_key:
         integration_settings["uazapi_key"] = config.uazapi_key
-        # Testar conexão com Uazapi
         try:
             response = requests.get(
                 "https://api.uazapi.com/v1/me",
@@ -46,14 +77,22 @@ async def save_integrations(config: IntegrationConfig):
         integration_settings["basileia_key"] = config.basileia_key
     
     if config.basileia_webhook:
+        if not config.basileia_webhook.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="Invalid webhook URL")
         integration_settings["basileia_webhook"] = config.basileia_webhook
         integration_settings["basileia_webhook_active"] = True
     
+    log_security_event("INTEGRATIONS_UPDATED", current_user.username, "Integration settings changed", get_client_ip(request))
+    
     return {"status": "ok", "message": "Configurações salvas"}
 
-@router.post("/integrations/test-uazapi")
-async def test_uazapi(key: str):
-    """Testa conexão com Uazapi"""
+
+@router.post("/test-uazapi", dependencies=[Depends(get_current_user)])
+@limiter.limit("10/minute")
+async def test_uazapi(request: Request, key: str):
+    if not key or len(key) < 10:
+        raise HTTPException(status_code=400, detail="Invalid API key")
+    
     try:
         response = requests.get(
             "https://api.uazapi.com/v1/me",
@@ -67,20 +106,35 @@ async def test_uazapi(key: str):
     except Exception as e:
         return {"status": "error", "connected": False, "message": f"Erro: {str(e)}"}
 
+
 @router.post("/webhook/basileia")
-async def basileia_webhook(data: dict):
-    """
-    Webhook para receber eventos do Basileia Church
-    """
+@limiter.limit("30/minute")
+async def basileia_webhook(request: Request):
+    client_ip = get_client_ip(request)
+    
+    if client_ip not in settings.allowed_webhook_ips_list and settings.ENVIRONMENT == "production":
+        log_security_event("WEBHOOK_BLOCKED", "unknown", f"Blocked IP: {client_ip}", client_ip)
+        raise HTTPException(status_code=403, detail="IP not allowed")
+    
+    body = await request.body()
+    signature = request.headers.get("X-Webhook-Signature", "")
+    
+    if not verify_webhook_signature(body, signature, settings.WEBHOOK_SECRET):
+        if settings.ENVIRONMENT == "production":
+            log_security_event("WEBHOOK_INVALID_SIGNATURE", "unknown", f"IP: {client_ip}", client_ip)
+            raise HTTPException(status_code=401, detail="Invalid signature")
+    
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    
     event_type = data.get("type", "unknown")
     
-    # Salvar alerta
-    from app.core.database import SessionLocal
-    from app.models.all_models import Alert
-    
-    db = SessionLocal()
+    db = next(get_db())
     try:
         alert = Alert(
+            id=str(uuid.uuid4()),
             type=event_type,
             message=str(data),
             level="info" if event_type == "success" else "warning"
@@ -88,33 +142,27 @@ async def basileia_webhook(data: dict):
         db.add(alert)
         db.commit()
         
-        # Processar evento
         if event_type == "client_created":
-            # Novo cliente criado - precisa de provisionamento manual
             pass
         elif event_type == "client_updated":
-            # Cliente atualizado
             pass
         elif event_type == "client_deleted":
-            # Cliente removido
             pass
             
         return {"status": "ok"}
     finally:
         db.close()
 
-@router.get("/alerts")
-async def get_alerts(limit: int = 50, level: str = None):
-    """Retorna lista de alertas"""
-    from app.core.database import SessionLocal
-    from app.models.all_models import Alert
+
+@router.get("/alerts", dependencies=[Depends(get_current_user)])
+@limiter.limit("60/minute")
+async def get_alerts(request: Request, limit: int = 50):
+    if limit > 100:
+        limit = 100
     
-    db = SessionLocal()
+    db = next(get_db())
     try:
-        query = db.query(Alert).order_by(Alert.created_at.desc())
-        if level:
-            query = query.filter(Alert.level == level)
-        alerts = query.limit(limit).all()
+        alerts = db.query(Alert).order_by(Alert.created_at.desc()).limit(limit).all()
         return [
             {
                 "id": a.id,
@@ -128,36 +176,27 @@ async def get_alerts(limit: int = 50, level: str = None):
     finally:
         db.close()
 
-@router.get("/cleanup/stats")
-async def get_cleanup_stats():
-    """Retorna estatísticas para limpeza"""
-    from app.core.database import SessionLocal
-    from app.models.all_models import Client, Proxy, Log
+
+@router.get("/cleanup/stats", dependencies=[Depends(get_current_user)])
+@limiter.limit("30/minute")
+async def get_cleanup_stats(request: Request):
     from datetime import datetime, timedelta
     
-    db = SessionLocal()
+    db = next(get_db())
     try:
-        three_months_ago = datetime.now() - timedelta(days=90)
+        six_months_ago = datetime.now() - timedelta(days=180)
         
-        # Clientes inativos há mais de 3 meses
         inactive_clients = db.query(Client).filter(
             Client.status.in_(["error", "disconnected"]),
-            Client.last_switch < three_months_ago
+            Client.last_switch < six_months_ago
         ).count()
         
-        # Proxies sem atividade há mais de 3 meses
         inactive_proxies = db.query(Proxy).filter(
-            Proxy.last_check < three_months_ago
+            Proxy.last_check < six_months_ago
         ).count()
         
-        # Logs antigos
         old_logs = db.query(Log).filter(
-            Log.created_at < three_months_ago
-        ).count()
-        
-        # Proxies sem atividade há mais de 3 meses
-        inactive_proxies = db.query(Proxy).filter(
-            Proxy.last_check < three_months_ago
+            Log.created_at < six_months_ago
         ).count()
         
         return {
@@ -168,42 +207,38 @@ async def get_cleanup_stats():
     finally:
         db.close()
 
-@router.post("/cleanup/clean")
-async def clean_old_data():
-    """Limpa dados antigos"""
-    from app.core.database import SessionLocal
-    from app.models.all_models import Client, Proxy, Log
+
+@router.post("/cleanup/clean", dependencies=[Depends(get_current_user)])
+@limiter.limit("5/minute")
+async def clean_old_data(request: Request, current_user: User = Depends(get_current_user)):
     from datetime import datetime, timedelta
+    from app.models.all_models import Client, Proxy, Log
     
-    db = SessionLocal()
+    db = next(get_db())
     try:
-        three_months_ago = datetime.now() - timedelta(days=90)
+        six_months_ago = datetime.now() - timedelta(days=180)
         
-        # Contadores
         deleted_clients = 0
         deleted_proxies = 0
         deleted_logs = 0
         
-        # Deletar clientes inativos
         inactive_clients = db.query(Client).filter(
             Client.status.in_(["error", "disconnected"]),
-            Client.last_switch < three_months_ago
+            Client.last_switch < six_months_ago
         ).all()
         for c in inactive_clients:
             db.delete(c)
             deleted_clients += 1
         
-        # Deletar proxies sem atividade
         inactive_proxies = db.query(Proxy).filter(
-            Proxy.last_check < three_months_ago
+            Proxy.last_check < six_months_ago
         ).all()
         for p in inactive_proxies:
             db.delete(p)
             deleted_proxies += 1
         
-        # Deletar logs antigos
         old_logs = db.query(Log).filter(
-            Log.created_at < three_months_ago
+            Log.created_at < six_months_ago
         ).all()
         for l in old_logs:
             db.delete(l)
@@ -211,9 +246,11 @@ async def clean_old_data():
         
         db.commit()
         
+        log_security_event("DATA_CLEANUP", current_user.username, f"Cleaned: {deleted_clients} clients, {deleted_proxies} proxies, {deleted_logs} logs", get_client_ip(request))
+        
         return {
             "status": "ok",
-            "message": f"Limpeza concluída: {deleted_clients} clientes, {deleted_proxies} proxies, {deleted_logs} logs removidos"
+            "message": f"Limpeza concluída: {deleted_clientes} clientes, {deleted_proxies} proxies, {deleted_logs} logs removidos"
         }
     except Exception as e:
         db.rollback()
@@ -221,13 +258,15 @@ async def clean_old_data():
     finally:
         db.close()
 
-@router.get("/monitoring/proxy/{proxy_ip}")
-async def get_proxy_logs(proxy_ip: str):
-    """Retorna todos os logs de um proxy específico"""
-    from app.core.database import SessionLocal
-    from app.models.all_models import NetworkLog
+
+@router.get("/monitoring/proxy/{proxy_ip}", dependencies=[Depends(get_current_user)])
+@limiter.limit("60/minute")
+async def get_proxy_logs(request: Request, proxy_ip: str):
+    import re
+    if not re.match(r'^(\d{1,3}\.){3}\d{1,3}$', proxy_ip):
+        raise HTTPException(status_code=400, detail="Invalid IP address format")
     
-    db = SessionLocal()
+    db = next(get_db())
     try:
         logs = db.query(NetworkLog).filter(
             NetworkLog.proxy_ip == proxy_ip
@@ -238,15 +277,15 @@ async def get_proxy_logs(proxy_ip: str):
                 "id": l.id,
                 "method": l.method,
                 "endpoint": l.endpoint,
-                "request_headers": l.request_headers,
-                "request_body": l.request_body,
-                "response_body": l.response_body,
                 "status_code": l.status_code,
                 "response_time": l.response_time,
-                "error_message": l.error_message,
                 "created_at": l.created_at.isoformat() if l.created_at else None
             }
             for l in logs
         ]
     finally:
         db.close()
+
+
+import uuid
+from app.models.all_models import Client, Proxy, Log, NetworkLog
