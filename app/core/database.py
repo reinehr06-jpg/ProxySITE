@@ -90,7 +90,56 @@ def init_models():
     if engine_secure != engine_proxy:
         Base.metadata.create_all(bind=engine_secure)
     
-    print("✅ Modelos inicializados em ambos os bancos")
+    # --- AUTO-SEED ADMIN USERS ---
+    from app.core.auth import get_password_hash
+    import uuid
+    
+    # Proxy Admin
+    db = SessionProxy()
+    try:
+        admin = db.query(User).filter(User.username.ilike("Proxy.adm@Basileia.global")).first()
+        if not admin:
+            admin = User(
+                id=str(uuid.uuid4()),
+                username="Proxy.adm@Basileia.global",
+                hashed_password=get_password_hash("1kPiJXL$0m#jAzbUaSN9ttWSFUAf7hbnJ2w1&Us6"),
+                is_active=True
+            )
+            db.add(admin)
+            db.commit()
+            print("🚀 Usuário Proxy Admin criado automaticamente.")
+        else:
+            # Garante que a senha esteja correta
+            admin.hashed_password = get_password_hash("1kPiJXL$0m#jAzbUaSN9ttWSFUAf7hbnJ2w1&Us6")
+            db.commit()
+    finally:
+        db.close()
+
+    # Vault Admin
+    db_s = SessionSecure()
+    try:
+        from app.models.events import EventsUser
+        admin_v = db_s.query(EventsUser).filter(EventsUser.email.ilike("Vault.basileia@basileia.global")).first()
+        if not admin_v:
+            admin_v = EventsUser(
+                id=str(uuid.uuid4()),
+                email="Vault.basileia@basileia.global",
+                hashed_password=get_password_hash("OUxB57gRIe&ZbJytFEeew@o5nB0NQ!R813hpQ!8L"),
+                full_name="Vault Admin",
+                is_active=True,
+                role="admin"
+            )
+            db_s.add(admin_v)
+            db_s.commit()
+            print("🚀 Usuário Vault Admin criado automaticamente.")
+        else:
+            # Garante que a senha esteja correta
+            admin_v.hashed_password = get_password_hash("OUxB57gRIe&ZbJytFEeew@o5nB0NQ!R813hpQ!8L")
+            db_s.commit()
+    finally:
+        db_s.close()
+
+    print("✅ Modelos inicializados e usuários sincronizados.")
 
 
 # Exports
