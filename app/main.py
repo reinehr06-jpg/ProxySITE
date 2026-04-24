@@ -126,6 +126,10 @@ app.include_router(events_pairing_router, prefix="/vault/api", tags=["Vault - Pa
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
 @app.get("/")
 async def root():
     return {

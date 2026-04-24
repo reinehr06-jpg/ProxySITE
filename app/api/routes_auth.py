@@ -386,17 +386,6 @@ async def generate_cross_system_token(current_user: User = Depends(get_current_u
 
 
 
-@router.get("/health", response_model=HealthCheckResponse)
-@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
-async def health_check(request: Request):
-    from datetime import datetime
-    
-    db_status = "ok"
-    redis_status = "ok"
-    
-    return HealthCheckResponse(
-        status="healthy",
-        timestamp=datetime.utcnow(),
-        database=db_status,
-        redis=redis_status if settings.REDIS_URL else None
-    )
+@router.get("/health")
+async def health_check():
+    return {"status": "healthy"}
